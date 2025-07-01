@@ -3,6 +3,49 @@ Janco — AI-powered cleaning service platform for African Homes. Built with Rea
 
 ---
 
+# 🧼 Co-Janitors.ng
+
+**Co-Janitors.ng** is a modern, AI-powered janitorial services platform that delivers on-demand and subscription-based cleaning services to residential and commercial spaces across Nigeria — starting with Ibadan, and expanding to Abuja, Lagos, and beyond.
+
+> Built for speed, scalability, and service excellence.
+
+---
+
+## 🚀 Overview
+
+Co-Janitors connects users with trained janitors using intelligent job scheduling and pricing tools. With AI-based area estimation, smart cleaner matching, and mobile-first access, it's the Uber for cleaning in West Africa.
+
+### ✨ Core Features
+
+- 📱 Cross-platform mobile app (React Native + Expo)
+- ⚙️ FastAPI backend with Python (secure and async)
+- 🤖 AI-powered area measurement via OpenCV + YOLO
+- 📍 Location-based janitor assignment
+- 💰 Wallet & subscription billing (Paystack/Stripe)
+- 🔐 Supabase authentication and PostgreSQL database
+- 📦 Supabase Storage for image uploads
+- 🔔 Notifications via Firebase and WhatsApp (Termii)
+
+---
+
+## 🧱 Tech Stack
+
+| Layer        | Tech Used              |
+|--------------|------------------------|
+| Frontend     | React Native (JSX)     |
+| Backend      | FastAPI (Python)       |
+| Database     | Supabase (PostgreSQL)  |
+| AI/ML        | OpenCV, YOLOv8, PyTorch|
+| Auth & Storage | Supabase Auth + Storage |
+| Payment      | Stripe or Paystack     |
+| Notifications| Firebase / Termii SMS  |
+
+---
+
+## 📦 Project Structure
+
+
+
 ## 💡 Use Cases
 
 - A tenant books a monthly deep cleaning subscription
