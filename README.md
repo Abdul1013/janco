@@ -1,11 +1,8 @@
-Janco — AI-powered cleaning service platform for African Homes. Built with React Native, FastAPI, Supabase, and OpenCV. 🚀 Clean spaces, happy faces.
-
-
----
 
 # 🧼 Co-Janitors.ng
 
 **Co-Janitors.ng** is a modern, AI-powered janitorial services platform that delivers on-demand and subscription-based cleaning services to residential and commercial spaces across Nigeria — starting with Ibadan, and expanding to Abuja, Lagos, and beyond.
+🚀 Clean spaces, happy faces.
 
 > Built for speed, scalability, and service excellence.
 
@@ -37,8 +34,8 @@ Co-Janitors connects users with trained janitors using intelligent job schedulin
 | Database     | Supabase (PostgreSQL)  |
 | AI/ML        | OpenCV, YOLOv8, PyTorch|
 | Auth & Storage | Supabase Auth + Storage |
-| Payment      | Stripe or Paystack     |
-| Notifications| Firebase / Termii SMS  |
+| Payment      | Paystack     |
+| Notifications| Termii SMS  |
 
 ---
 
