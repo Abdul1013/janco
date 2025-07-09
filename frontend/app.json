@@ -12,15 +12,19 @@
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#121212"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+       "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We need your location to personalize services."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#121212",
+          "permissions": ["ACCESS_FINE_LOCATION"]
       },
       "edgeToEdgeEnabled": true
     },
