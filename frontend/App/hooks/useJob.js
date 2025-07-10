@@ -86,3 +86,7 @@ export default function useJobs(initialJobId = null) {
   };
   return {job,loading,createJob,updateJobStatus,setJobId};
 }
+
+// Convert polling (setInterval) to Supabase real-time (Postgres changes over WebSocket).
+
+// Use supabase.channel().on('postgres_changes', ...) to listen to jobs table in real-time.
