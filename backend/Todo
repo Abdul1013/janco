@@ -1,0 +1,39 @@
+# Create a /match-and-create-job endpoint that:
+
+# Receives booking request
+
+# Queries janitors from Supabase via the supabase-py SDK
+
+# Finds available + nearby janitor
+
+# Inserts into jobs table
+
+# Returns estimate
+
+# pip install supabase
+# python
+# Copy
+# Edit
+# from supabase import create_client
+# from fastapi import APIRouter
+
+# router = APIRouter()
+# supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# @router.post("/match-and-create-job")
+# def match_and_create_job(payload: dict):
+#     janitors = supabase.table("janitors").select("*").eq("available", True).execute().data
+
+#     # match logic (based on location/service_type)
+#     assigned_janitor = janitors[0]  # basic match, improve later
+
+#     job = {
+#         "user_id": payload["user_id"],
+#         "janitor_id": assigned_janitor["id"],
+#         "service_type": payload["service_type"],
+#         "preferred_date": payload["preferred_date"],
+#         "status": "assigned"
+#     }
+
+#     result = supabase.table("jobs").insert(job).execute()
+#     return { "job_id": result.data[0]["id"], "janitor": assigned_janitor }
