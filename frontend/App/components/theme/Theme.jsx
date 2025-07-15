@@ -77,6 +77,77 @@ export const Elevation = {
   dropdown: 5,
 };
 
+export const ButtonStyles = (variant, size = 'md', disabled =false, fullWidth = false) => {
+  const sizes = {
+    sm: {
+      paddingVertical: Spacing.xs,
+      paddingHorizontal: Spacing.md,
+      fontSize: fontSizes.small,
+    },
+    md: {
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.lg,
+      fontSize: fontSizes.body,
+    },
+    lg: {
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.md,
+      fontSize: fontSizes.body,
+    },
+  };
+
+  const colors = {
+    primary: {
+      backgroundColor: Colors.dark.primary,
+      textColor: Colors.dark.white,
+    },
+    secondary: {
+      backgroundColor: Colors.dark.secondary,
+      textColor: Colors.dark.white,
+      borderColor: Colors.dark.secondary,
+    },
+    outline: {
+      backgroundColor: "transparent",
+      textColor: Colors.dark.primary,
+      borderColor: Colors.dark.primary,
+    },
+    ghost: { backgroundColor: "transparent", textColor: Colors.dark.textMuted },
+    danger: { backgroundColor: "#FF4C4C", textColor: Colors.dark.white },
+  };
+
+  const c = colors[variant] || colors.primary;
+  const s = sizes[size] || sizes.md;
+
+  return {
+    buttonStyle: {
+      paddingVertical: s.paddingVertical,
+      paddingHorizontal: s.paddingHorizontal,
+      backgroundColor: c.backgroundColor,
+      borderWidth: variant === "outline" ? 1 : 0,
+      borderRadius: Border.radiusMd,
+      width: fullWidth ? "100%" : "auto",
+      justifyContent: "center",
+      alignItems: "center",
+      elevation: Elevation.card,
+      shadowColor: Colors.dark.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+    },
+    textStyle: {
+      fontSize: s.fontSize,
+      fontFamily: fonts.bold,
+      color: c.textColor,
+      textAlign: "center",
+      letterSpacing: 1,
+    },
+     contentStyle: {
+      flexDirection: 'row',
+      alignItems:    'center',
+      justifyContent:'center',
+    },
+  };
+};
 export const Typography = StyleSheet.create({
   container: {
     flex: 1,
@@ -141,9 +212,13 @@ export const Typography = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 20,
     fontSize: 16,
-    color:Colors.dark.cardBackground2
+    color: Colors.dark.cardBackground2,
   },
-  checkBox: { flexDirection: "row", justifyContent: 'space-between', marginBottom: Spacing.sm},
+  checkBox: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: Spacing.sm,
+  },
   uploadBox: {
     borderWidth: 2,
     borderColor: "#444",
