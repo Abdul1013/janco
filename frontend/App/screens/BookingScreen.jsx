@@ -9,8 +9,7 @@ import {
   TextInput,
   Alert,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import Icon from "react-native-vector-icons/FontAwesome5";
+
 import CheckBox, { Checkbox } from "expo-checkbox";
 import { Colors, Spacing, Typography } from "../components/theme/Theme";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -18,10 +17,11 @@ import Header from "../components/Header";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../hooks/authContext";
 import useJobs from "../hooks/useJob";
+import Button from "../components/ui/Button";
 
 export default function BookingScreen({ navigation }) {
   const { profile, user } = useAuth();
-  const {createJob} =useJobs();
+  const { createJob } = useJobs();
   const [category, setCategory] = useState(null);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -71,34 +71,37 @@ export default function BookingScreen({ navigation }) {
       case "fumigation":
         return <FumigationForm />;
       default:
-        return <Text style={Typography.header}>No job type selected. Pick a job to get Started</Text>;
+        return (
+          <Text style={Typography.header}>
+            No job type selected. Pick a job to get Started
+          </Text>
+        );
     }
   };
 
-  const handleBookingSubmit = async() =>{
-    try{
+  const handleBookingSubmit = async () => {
+    try {
       const bookingData = {
-    service_type: category,
-      scheduled_date: date,
-      address: fullAddress,
-      latitude: userLocation?.lat,
-      longitude: userLocation?.lng,
-      room_data: JSON.stringify([
-        { room: 'bedroom', count: rooms },
-        { room: 'toilet', count: toilets },
-      ]),
-      extras: JSON.stringify(extras),
-    
-      }
+        service_type: category,
+        scheduled_date: date,
+        address: fullAddress,
+        latitude: userLocation?.lat,
+        longitude: userLocation?.lng,
+        room_data: JSON.stringify([
+          { room: "bedroom", count: rooms },
+          { room: "toilet", count: toilets },
+        ]),
+        extras: JSON.stringify(extras),
+      };
 
       const created = await createJob(bookingData);
-      navigation.navigate("EstimateScreen", {job: created})
-    }catch(err){
-      Alert.alert("Booking Failed, Please try again")
+      navigation.navigate("EstimateScreen", { job: created });
+    } catch (err) {
+      Alert.alert("Booking Failed, Please try again");
     }
-  }
+  };
   return (
-    <SafeAreaView style={Typography.container}>
+    <SafeAreaView style={[Typography.container, {marginBottom: -40}]}>
       <Header title={"Book a Service"} />
       <Text style={Typography.header}>
         Choose a service category to begin booking
@@ -126,14 +129,14 @@ export default function BookingScreen({ navigation }) {
             value={date}
             onChangeText={setDate}
             placeholder="preferred date for cleaning"
-              placeholderTextColor={Colors.dark.accent}
+            placeholderTextColor={Colors.dark.accent}
             style={Typography.input}
           />
           <TextInput
             value={time}
             onChangeText={setTime}
             placeholder="preferred time for cleaning"
-              placeholderTextColor={Colors.dark.accent}
+            placeholderTextColor={Colors.dark.accent}
             style={Typography.input}
           />
           <TextInput
@@ -149,7 +152,9 @@ export default function BookingScreen({ navigation }) {
 
         {/* <HouseCleaningForm /> */}
         <View>
-          <Text style={[Typography.note, {marginVertical: Spacing.sm}]}>Any extra notes?</Text>
+          <Text style={[Typography.note, { marginVertical: Spacing.sm }]}>
+            Any extra notes?
+          </Text>
           <TextInput
             value={notes}
             onChangeText={setNotes}
@@ -159,11 +164,15 @@ export default function BookingScreen({ navigation }) {
             style={Typography.input}
           />
         </View>
+   <Button title="Continue To Estimate"
+   variant="primary"
+   size="lg"
+   fullWidth
+  //  onPress={handleSearch}
+   />
       </ScrollView>
 
-      <TouchableOpacity style={styles.continueButton}>
-        <Text style={styles.continueText}>Continue to Estimate</Text>
-      </TouchableOpacity>
+ 
     </SafeAreaView>
   );
 }
@@ -175,7 +184,7 @@ const styles = StyleSheet.create({
 
   continueButton: {
     // marginTop: "auto",
-    marginBottom: -30,
+    // marginBottom: -30,
     backgroundColor: "#F9CB40",
     paddingVertical: 16,
     borderRadius: 10,
@@ -199,10 +208,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     flex: 1,
     height: 100,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
     borderBottomColor: Colors.dark.accent,
     borderBottomWidth: 0.5,
-    padding: Spacing.xs,
+    padding: Spacing.xxs,
   },
   active: {
     backgroundColor: Colors.dark.cardBackground,
@@ -227,21 +236,7 @@ const HouseCleaningForm = () => {
   });
   const [notes, setNotes] = useState("");
 
-  // const calculateCost = () => {
-  //   const roomCost = rooms * 1000;
-  //   const toiletCost = toilets * 700;
-  //   const extrasCost =
-  //     (extras.kitchen ? 500 : 0) +
-  //     (extras.livingRoom ? 500 : 0) +
-  //     (extras.windowCleaning ? 800 : 0);
-  //   return {
-  //     roomCost,
-  //     toiletCost,
-  //     extrasCost,
-  //     total: roomCost + toiletCost + extrasCost,
-  //   };
-  // };
-
+ 
   return (
     <View>
       <TextInput
@@ -250,7 +245,6 @@ const HouseCleaningForm = () => {
         keyboardType="numeric"
         style={Typography.input}
         placeholder="How many rooms?"
-        
       />
 
       <TextInput
@@ -259,13 +253,12 @@ const HouseCleaningForm = () => {
         keyboardType="numeric"
         style={Typography.input}
         placeholder="How many toilets?"
-              placeholderTextColor={Colors.dark.accent}
-
+        placeholderTextColor={Colors.dark.accent}
       />
 
       <Text style={Typography.note}>Extras:</Text>
 
-   <View style={Typography.checkBox}>
+      <View style={Typography.checkBox}>
         <Text style={Typography.note}>Kitchen</Text>
         <Checkbox
           label="Kitchen"
@@ -274,7 +267,7 @@ const HouseCleaningForm = () => {
           color={isChecked ? "#4630EB" : undefined}
         />
       </View>
-       <View style={Typography.checkBox}>
+      <View style={Typography.checkBox}>
         <Text style={Typography.note}>Living Room</Text>
         <Checkbox
           label="Living Room"
