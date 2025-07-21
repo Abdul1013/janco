@@ -37,3 +37,14 @@
 
 #     result = supabase.table("jobs").insert(job).execute()
 #     return { "job_id": result.data[0]["id"], "janitor": assigned_janitor }
+
+# python3 -m venv venv
+# source venv/bin/activate
+# pip install --upgrade pip setuptools wheel setuptools-rust
+# pip install fastapi uvicorn supabase python-dotenv
+#uvicorn app.main:app --reload
+
+# pip freeze > requirements.txt
+# to save dep
+eas build -p android --profile preview
+eas build --profile development --platform android
