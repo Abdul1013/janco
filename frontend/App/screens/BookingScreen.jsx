@@ -26,6 +26,8 @@ export default function BookingScreen({ navigation }) {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [notes, setNotes] = useState("");
+  const [rooms, setRooms] = useState("")
+  const [toilets, setToilets] = useState("")
   const categories = [
     {
       id: "house_cleaning",
@@ -80,26 +82,41 @@ export default function BookingScreen({ navigation }) {
   };
 
   const handleBookingSubmit = async () => {
-    try {
-      const bookingData = {
-        service_type: category,
-        scheduled_date: date,
-        address: fullAddress,
-        latitude: userLocation?.lat,
-        longitude: userLocation?.lng,
-        room_data: JSON.stringify([
-          { room: "bedroom", count: rooms },
-          { room: "toilet", count: toilets },
-        ]),
-        extras: JSON.stringify(extras),
-      };
+  try {
+    const bookingData = {
+      service_type: category,
+      scheduled_date: date,
+      address: profile?.address,
+      latitude: user?.lat,
+      longitude: user?.lng,
+      room_data: JSON.stringify([
+        { room: "bedroom", count: rooms },
+        { room: "toilet", count: toilets },
+      ]),
+      extras: JSON.stringify(extras),
+    };
 
-      const created = await createJob(bookingData);
-      navigation.navigate("EstimateScreen", { job: created });
-    } catch (err) {
-      Alert.alert("Booking Failed, Please try again");
-    }
-  };
+    const created = await createJob(bookingData);
+
+    // 👇 Send form data along with job
+    navigation.navigate("EstimateScreen", {
+      job: created,
+      category,
+      date,
+      time,
+      address: profile?.address,
+      userLocation: { lat: user?.lat, lng: user?.lng },
+      rooms,
+      toilets,
+      clothesCount,
+      // extras,
+      notes,
+    });
+  } catch (err) {
+    Alert.alert("Booking Failed", "Please try again.");
+  }
+};
+
   return (
     <SafeAreaView style={[Typography.container, {marginBottom: -40}]}>
       <Header title={"Book a Service"} />
@@ -168,7 +185,20 @@ export default function BookingScreen({ navigation }) {
    variant="primary"
    size="lg"
    fullWidth
-  //  onPress={handleSearch}
+   onPress={()=> navigation.navigate('PriceEstimate', {
+  category,
+  rooms,
+  toilets,
+  // clothesCount,
+  // extras,
+  date,
+  time,
+  notes,
+  address: profile?.address,
+  userLocation: {
+    lat: user?.lat || 0,
+    lng: user?.lng || 0,
+  }})}
    />
       </ScrollView>
 
@@ -395,3 +425,42 @@ const LaundryForm = () => {
 //         </View>
 //       ))}
 //     </ScrollView>
+
+
+// *PLEASE CURATE FIXED PRICES FOR THIS LIST TO BE ITEMIZED IN THE MVP(FIRST APP VERSION).* 
+
+
+
+//  *A. HOUSEKEEPING SERVICES* 
+
+// 1. Bedroom Cleaning
+// 2. Living room cleaning 
+// 3. Kitchen Cleaning 
+// 4. Bathroom Cleaning
+// 5. Dishwashing 
+// 6. Ironing 
+// 7. General Dusting
+
+
+//  *B. DEEP CLEANING* 
+
+// 1. Room Deep Cleaning: _(Bedframe + underbed, walls wiped, furniture cleaned, fan/light fixtures, baseboards, and mopping)_
+// 2. Living Room Deep Cleaning: _(Furniture cleaning, rugs, electronics wiped, cobweb removal, detailed floor scrubbing)_ 
+// 3. Kitchen Deep Cleaning: _(Degreasing cabinets, inside drawers, wiping appliances, stove & sink scrubbed, backsplash cleaned)_
+// 4. Bathroom Deep Cleaning: _(Scrub floor tiles & grout, descaling toilet, sink, tub/shower, mirror polish, mold removal)_
+
+
+//  *C. LAUNDRY SERVICES* 
+
+// CLOTHING ITEMS
+// 1. Shirt/Blouse
+// 2. Trouser/skirt 
+// 3. Grown/Native wear
+// 4. Children's Clothes 
+
+// BEDDING & HOME ITEMS
+// 1. Bedsheet
+// 2. Duvet
+// 3. Curtain
+// 4. Pillowcase 
+// 5. Towels
