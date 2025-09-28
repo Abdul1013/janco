@@ -48,3 +48,8 @@
 # to save dep
 eas build -p android --profile preview
 eas build --profile development --platform android
+eas build -p android --profile production
+
+expo publish
+eas update --branch production --message "Hotfix" for update
+
