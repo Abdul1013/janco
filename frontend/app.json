@@ -8,7 +8,9 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "scheme": "janco",
-    "deepLinks" : ["janco://"],
+    "deepLinks": [
+      "janco://"
+    ],
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
@@ -16,7 +18,7 @@
     },
     "ios": {
       "supportsTablet": true,
-       "infoPlist": {
+      "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to personalize services."
       }
     },
@@ -24,15 +26,23 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#121212",
-          "permissions": ["ACCESS_FINE_LOCATION"]
+        "permissions": [
+          "ACCESS_FINE_LOCATION"
+        ]
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.abdulthedev.Janco"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "fa4dbd96-903c-4f80-8318-a304dfbeac18"
+      }
+    }
   }
 }
