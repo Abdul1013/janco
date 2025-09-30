@@ -56,11 +56,11 @@ const {user,profile, loading} = useAuth();
       </View>
           <Text
             style={[
-              Typography.default,
+              Typography.note,
               { color: Colors.light.textMuted, marginBottom: 15 },
             ]}
           >
-            📍 New Garage Ibadan
+           {profile?.address}
           </Text>
 
       {/* <Icon name="alert"/> */}
