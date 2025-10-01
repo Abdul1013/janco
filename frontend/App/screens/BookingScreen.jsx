@@ -248,12 +248,7 @@ const styles = StyleSheet.create({
   },
 });
 
-// [ Header ]            → “Select a Service”
-// [ Service Options ]   → Cards with icons
-// [ Form Fields ]       → Room type, size, date/time, frequency
-// [ Optional Add-ons ]  → Extra toggles
-// [ Price Estimate ]    → Live calculator
-// [ CTA Button ]        → “Book Service”
+
 
 const HouseCleaningForm = () => {
   const [rooms, setRooms] = useState(1);
@@ -383,84 +378,3 @@ const LaundryForm = () => {
   );
 };
 
-// const cost = calculateCost();
-
-// return (
-// <View>
-// <Text>How many rooms?</Text>
-// <Input value={rooms} onChangeText={setRooms} keyboardType="numeric" />
-
-//   <Text>How many toilets?</Text>
-//   <Input value={toilets} onChangeText={setToilets} keyboardType="numeric" />
-
-//   <Text>Extras:</Text>
-//   <Checkbox label="Kitchen" value={extras.kitchen} onValueChange={(v) => setExtras({ ...extras, kitchen: v })} />
-//   <Checkbox label="Living Room" value={extras.livingRoom} onValueChange={(v) => setExtras({ ...extras, livingRoom: v })} />
-//   <Checkbox label="Window Cleaning" value={extras.windowCleaning} onValueChange={(v) => setExtras({ ...extras, windowCleaning: v })} />
-
-//   <Text>Any extra notes?</Text>
-//   <TextInput value={notes} onChangeText={setNotes} placeholder="e.g. Clean under bed..." multiline />
-
-//   <View style={{ marginTop: 20 }}>
-//     <Text>--- Price Breakdown ---</Text>
-//     <Text>Rooms: ₦{cost.roomCost}</Text>
-//     <Text>Toilets: ₦{cost.toiletCost}</Text>
-//     <Text>Extras: ₦{cost.extrasCost}</Text>
-//     <Text style={{ fontWeight: 'bold' }}>Total: ₦{cost.total}</Text>
-//   </View>
-// </View>
-
-// );
-
-//     <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
-//       <Icon name="upload" size={32} color="#888" />
-//       <Text style={styles.uploadText}>Tap to upload image</Text>
-//     </TouchableOpacity>
-
-//     <ScrollView style={styles.scanList}>
-//       {scans.map((scan, index) => (
-//         <View key={index} style={styles.scanCard}>
-//           <Image source={{ uri: scan.uri }} style={styles.scanImage} />
-//           <Text style={styles.scanText}>{scan.area} m²</Text>
-//         </View>
-//       ))}
-//     </ScrollView>
-
-
-// *PLEASE CURATE FIXED PRICES FOR THIS LIST TO BE ITEMIZED IN THE MVP(FIRST APP VERSION).* 
-
-
-
-//  *A. HOUSEKEEPING SERVICES* 
-
-// 1. Bedroom Cleaning
-// 2. Living room cleaning 
-// 3. Kitchen Cleaning 
-// 4. Bathroom Cleaning
-// 5. Dishwashing 
-// 6. Ironing 
-// 7. General Dusting
-
-
-//  *B. DEEP CLEANING* 
-
-// 1. Room Deep Cleaning: _(Bedframe + underbed, walls wiped, furniture cleaned, fan/light fixtures, baseboards, and mopping)_
-// 2. Living Room Deep Cleaning: _(Furniture cleaning, rugs, electronics wiped, cobweb removal, detailed floor scrubbing)_ 
-// 3. Kitchen Deep Cleaning: _(Degreasing cabinets, inside drawers, wiping appliances, stove & sink scrubbed, backsplash cleaned)_
-// 4. Bathroom Deep Cleaning: _(Scrub floor tiles & grout, descaling toilet, sink, tub/shower, mirror polish, mold removal)_
-
-
-//  *C. LAUNDRY SERVICES* 
-
-// CLOTHING ITEMS
-// 1. Shirt/Blouse
-// 2. Trouser/skirt 
-// 3. Grown/Native wear
-// 4. Children's Clothes 
-
-// BEDDING & HOME ITEMS
-// 1. Bedsheet
-// 2. Duvet
-// 3. Curtain
-// 4. Pillowcase 
-// 5. Towels
