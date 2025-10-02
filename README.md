@@ -71,3 +71,5 @@ MIT License — feel free to fork, contribute, or deploy with attribution.
 
 We're open to collaborators, investors, and community testers. Reach out at [info@co-janitors.ng](mailto:info@co-janitors.ng)
 
+
+bookingscreen -> priceestimate -> nearby/choose janitor ->  job status -> chat screen 
