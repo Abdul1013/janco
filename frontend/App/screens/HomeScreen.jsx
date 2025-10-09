@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/FontAwesome5";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Colors, Typography, Spacing } from "../components/theme/Theme";
@@ -31,8 +31,10 @@ const serviceCategories = [
   },
 ];
 
+
 export default function HomeScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { user, profile, loading } = useAuth();
 
   return (
@@ -60,7 +62,8 @@ export default function HomeScreen() {
       >
         {profile?.address}
       </Text>
-      <ScrollView contentContainerStyle={{marginBottom:0 }} contentInsetAdjustmentBehavior="never" showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{paddingBottom: insets.bottom + 70, 
+        }} contentInsetAdjustmentBehavior="never" showsVerticalScrollIndicator={false}>
         {/* <Icon name="alert"/> */}
         <Text
           style={[
@@ -143,7 +146,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    // gap: Spacing.md
   },
 
   gridCard: {
@@ -156,8 +158,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     width: "48%",
-    // flexBasis:"48%",
-    // flexGrow: 1,
     marginBottom: 12,
   },
   gridText: {
