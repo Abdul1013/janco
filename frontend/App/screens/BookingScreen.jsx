@@ -281,61 +281,31 @@ const styles = StyleSheet.create({
   },
 });
 
-function HouseCleaningForm(rooms,setRooms, toilets,setToilets,extras,setExtras) {
+function HouseCleaningForm({rooms,setRooms, toilets,setToilets,extras,setExtras}) {
 
   const [isChecked] = useState(false);
 
 
   return (
     <View>
-      <TextInput
-        value={String(rooms)}
-        onChangeText={setRooms}
-        keyboardType="numeric"
-        style={Typography.input}
-        placeholder="How many rooms?"
-      />
-
-      <TextInput
-        value={string(toilets)}
-        onChangeText={setToilets}
-        keyboardType="numeric"
-        style={Typography.input}
-        placeholder="How many toilets?"
-        placeholderTextColor={Colors.dark.accent}
-      />
-
+      <TextInput value={String(rooms)} onChangeText={setRooms} keyboardType="numeric" style={Typography.input} placeholder="How many rooms?" />
+      <TextInput value={String(toilets)} onChangeText={setToilets} keyboardType="numeric" style={Typography.input} placeholder="How many toilets?" placeholderTextColor={Colors.dark.accent} />
       <Text style={Typography.note}>Extras:</Text>
 
       <View style={Typography.checkBox}>
         <Text style={Typography.note}>Kitchen</Text>
-        <Checkbox
-          label="Kitchen"
-          value={extras.kitchen}
-          onValueChange={(v) => setExtras({ ...extras, kitchen: v })}
-          color={isChecked ? "#4630EB" : undefined}
-        />
+        <Checkbox value={extras.kitchen} onValueChange={(v) => setExtras({ ...extras, kitchen: v })} color={isChecked ? "#4630EB" : undefined} />
       </View>
       <View style={Typography.checkBox}>
         <Text style={Typography.note}>Living Room</Text>
-        <Checkbox
-          label="Living Room"
-          value={extras.livingRoom}
-          onValueChange={(v) => setExtras({ ...extras, livingRoom: v })}
-          color={isChecked ? "#4630EB" : undefined}
-        />
+        <Checkbox value={extras.livingRoom} onValueChange={(v) => setExtras({ ...extras, livingRoom: v })} color={isChecked ? "#4630EB" : undefined} />
       </View>
       <View style={Typography.checkBox}>
         <Text style={Typography.note}>Window Cleaning</Text>
-
-        <CheckBox
-          label="Window Cleaning"
-          value={extras.windowCleaning}
-          onValueChange={(v) => setExtras({ ...extras, windowCleaning: v })}
-          color={isChecked ? "#4630EB" : undefined}
-        />
+        <CheckBox value={extras.windowCleaning} onValueChange={(v) => setExtras({ ...extras, windowCleaning: v })} color={isChecked ? "#4630EB" : undefined} />
       </View>
     </View>
+
   );
 };
 

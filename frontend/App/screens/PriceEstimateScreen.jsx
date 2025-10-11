@@ -125,10 +125,10 @@ export default function PriceEstimateScreen({ route }) {
             alignItems: "center",
           }}
         >
-          <Text style={{ fontSize: 16 }}>Use fixed (MVP) pricing</Text>
+          <Text style={{ fontSize: 16, color: 'white' }}>Use fixed (MVP) pricing</Text>
           <Switch value={useFixedPricing} onValueChange={setUseFixedPricing} />
         </View>
-        <Text style={styles.header}>Estimated Cost</Text>
+        <Text style={Typography.subtitle}>Estimated Cost</Text>
 
         <View style={styles.card}>
           <Text style={styles.label}>Service :{category || "-"} </Text>
