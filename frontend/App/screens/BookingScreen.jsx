@@ -1,9 +1,9 @@
+//set services display to be dynamically fetched from dashboards
 import React, { useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
   ScrollView,
   TextInput,
@@ -16,18 +16,27 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../hooks/authContext";
-import useJobs from "../hooks/useJob";
+// import useJobs from "../hooks/useJob";
 import Button from "../components/ui/Button";
 
 export default function BookingScreen({ navigation }) {
   const { profile, user } = useAuth();
-  const { createJob } = useJobs();
+  // const { createJob } = useJobs();
+
   const [category, setCategory] = useState(null);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [notes, setNotes] = useState("");
-  const [rooms, setRooms] = useState("")
-  const [toilets, setToilets] = useState("")
+
+  //numeric inputs
+  const [rooms, setRooms] = useState("1");
+  const [toilets, setToilets] = useState("1");
+  const [clothesCount, setClothesCount] = useState("0");
+  const [extras, setExtras] = useState({
+    kitchen: false,
+    livingRoom: false,
+    windowCleaning: false,
+  });
   const categories = [
     {
       id: "house_cleaning",
@@ -67,14 +76,25 @@ export default function BookingScreen({ navigation }) {
   const renderForm = () => {
     switch (category) {
       case "house_cleaning":
-        return <HouseCleaningForm />;
-      case "laundry":
-        return <LaundryForm />;
-      case "fumigation":
         return (
-        <Text style={Typography.header}> 
-          Coming Soon
-        </Text>);
+          <HouseCleaningForm
+            rooms={rooms}
+            setRooms={setRooms}
+            toilets={toilets}
+            setToilets={setToilets}
+            extras={extras}
+            setExtras={setExtras}
+          />
+        );
+      case "laundry":
+        return (
+          <LaundryForm
+            clothesCount={clothesCount}
+            setClothesCount={setClothesCount}
+          />
+        );
+      case "fumigation":
+        return <Text style={Typography.header}>Coming Soon</Text>;
       default:
         return (
           <Text style={Typography.header}>
@@ -85,43 +105,43 @@ export default function BookingScreen({ navigation }) {
   };
 
   const handleBookingSubmit = async () => {
-  try {
-    const bookingData = {
-      service_type: category,
-      scheduled_date: date,
-      address: profile?.address,
-      latitude: user?.lat,
-      longitude: user?.lng,
-      room_data: JSON.stringify([
-        { room: "bedroom", count: rooms },
-        { room: "toilet", count: toilets },
-      ]),
-      extras: JSON.stringify(extras),
-    };
+    try {
+      const bookingData = {
+        service_type: category,
+        scheduled_date: date,
+        address: profile?.address,
+        latitude: user?.lat,
+        longitude: user?.lng,
+        room_data: JSON.stringify([
+          { room: "bedroom", count: rooms },
+          { room: "toilet", count: toilets },
+        ]),
+        extras: JSON.stringify(extras),
+      };
 
-    const created = await createJob(bookingData);
+      const created = await createJob(bookingData);
 
-    // 👇 Send form data along with job
-    navigation.navigate("EstimateScreen", {
-      job: created,
-      category,
-      date,
-      time,
-      address: profile?.address,
-      userLocation: { lat: user?.lat, lng: user?.lng },
-      rooms,
-      toilets,
-      clothesCount,
-      // extras,
-      notes,
-    });
-  } catch (err) {
-    Alert.alert("Booking Failed", "Please try again.");
-  }
-};
+      // 👇 Send form data along with job
+      navigation.navigate("EstimateScreen", {
+        job: created,
+        category,
+        date,
+        time,
+        address: profile?.address,
+        userLocation: { lat: user?.lat, lng: user?.lng },
+        rooms,
+        toilets,
+        clothesCount,
+        // extras,
+        notes,
+      });
+    } catch (err) {
+      Alert.alert("Booking Failed", "Please try again.");
+    }
+  };
 
   return (
-    <SafeAreaView style={[Typography.container, {marginBottom: -40}]}>
+    <SafeAreaView style={[Typography.container, { marginBottom: -40 }]}>
       <Header title={"Book a Service"} />
       <Text style={Typography.header}>
         Choose a service category to begin booking
@@ -170,7 +190,6 @@ export default function BookingScreen({ navigation }) {
 
         {renderForm()}
 
-        {/* <HouseCleaningForm /> */}
         <View>
           <Text style={[Typography.note, { marginVertical: Spacing.sm }]}>
             Any extra notes?
@@ -184,28 +203,39 @@ export default function BookingScreen({ navigation }) {
             style={Typography.input}
           />
         </View>
-   <Button title="Continue To Estimate"
-   variant="primary"
-   size="lg"
-   fullWidth
-   onPress={()=> navigation.navigate('PriceEstimate', {
-  category,
-  rooms,
-  toilets,
-  // clothesCount,
-  // extras,
-  date,
-  time,
-  notes,
-  address: profile?.address,
-  userLocation: {
-    lat: user?.lat || 0,
-    lng: user?.lng || 0,
-  }})}
-   />
-      </ScrollView>
+        <Button
+          title="Continue To Estimate"
+          variant="primary"
+          size="lg"
+          fullWidth
+          onPress={() => {if (!category) return Alert.alert("Please Select A service type ");
+            if(!date || !time) return Alert.alert("please Provide and time");
 
- 
+            //convert numeric string to numbers
+             const parsedRooms = parseInt(rooms || "0", 10) || 0;
+            const parsedToilets = parseInt(toilets || "0", 10) || 0;
+            const parsedClothes = parseInt(clothesCount || "0", 10) || 0;
+
+         
+            navigation.navigate("PriceEstimate", {
+              category,
+              rooms,
+              toilets,
+              // clothesCount,
+              // extras,
+              date,
+              time,
+              notes,
+              address: profile?.address,
+              userLocation: {
+                lat: user?.lat || 0,
+                lng: user?.lng || 0,
+              },
+            })
+          }
+        }
+        />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -251,24 +281,15 @@ const styles = StyleSheet.create({
   },
 });
 
+function HouseCleaningForm(rooms,setRooms, toilets,setToilets,extras,setExtras) {
+
+  const [isChecked] = useState(false);
 
 
-const HouseCleaningForm = () => {
-  const [rooms, setRooms] = useState(1);
-  const [toilets, setToilets] = useState(1);
-  const [isChecked, setIsChecked] = useState(false);
-  const [extras, setExtras] = useState({
-    kitchen: false,
-    livingRoom: false,
-    windowCleaning: false,
-  });
-  const [notes, setNotes] = useState("");
-
- 
   return (
     <View>
       <TextInput
-        value={rooms}
+        value={String(rooms)}
         onChangeText={setRooms}
         keyboardType="numeric"
         style={Typography.input}
@@ -276,7 +297,7 @@ const HouseCleaningForm = () => {
       />
 
       <TextInput
-        value={toilets}
+        value={string(toilets)}
         onChangeText={setToilets}
         keyboardType="numeric"
         style={Typography.input}
@@ -318,8 +339,7 @@ const HouseCleaningForm = () => {
   );
 };
 
-const LaundryForm = () => {
-  const [clothesCount, setClothesCount] = useState(10);
+function LaundryForm({ clothesCount, setClothesCount }) {
   const [clothTypes, setClothTypes] = useState({
     shirts: false,
     trousers: false,
@@ -336,7 +356,7 @@ const LaundryForm = () => {
     <View>
       <Text>How many clothes?</Text>
       <TextInput
-        value={clothesCount}
+        value={String(clothesCount)}
         onChangeText={setClothesCount}
         keyboardType="numeric"
       />
@@ -380,4 +400,3 @@ const LaundryForm = () => {
     </View>
   );
 };
-
