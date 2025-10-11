@@ -14,7 +14,7 @@ export default function Header({ title }) {
         marginBottom: Spacing.xs,
       }}
     >
-      {" "}
+   
       <TouchableOpacity onPress={() => navigation.goBack()}>
         <MaterialIcons name="arrow-back" size={24} color="white" />
       </TouchableOpacity>

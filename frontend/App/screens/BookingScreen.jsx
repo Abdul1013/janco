@@ -71,7 +71,10 @@ export default function BookingScreen({ navigation }) {
       case "laundry":
         return <LaundryForm />;
       case "fumigation":
-        return <FumigationForm />;
+        return (
+        <Text style={Typography.header}> 
+          Coming Soon
+        </Text>);
       default:
         return (
           <Text style={Typography.header}>
