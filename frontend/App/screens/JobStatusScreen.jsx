@@ -1,4 +1,3 @@
-// screens/JobStatus.js
 import React, { useEffect, useState, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -169,3 +168,17 @@ const styles = StyleSheet.create({
   actionBtn: { backgroundColor: Colors.primary || "#00A86B", paddingVertical: 12, paddingHorizontal: 18, borderRadius: 8, marginTop: 14 },
   actionText: { color: "#fff", fontWeight: "700" },
 });
+
+// API expectations & tips
+
+//  backend should expose these endpoints (or adapt names/shape in code):
+
+// GET /nearby-janitors?service=...&user_lat=...&user_lng=... → { count, janitors: [{id, name, lat, lng, bio, avatar, rating, distance_km}] }
+
+// POST /book-job → accepts booking payload and returns { job } (job should include id, status, and janitor object with lat/lng)
+
+// GET /jobs/:id → returns latest job object (used by JobStatus polling)
+
+// POST /cancel-job → accepts { job_id }, cancels and returns u
+
+// use real-time updates instead of polling, we can add a WebSocket or Supabase Realtime subscription
