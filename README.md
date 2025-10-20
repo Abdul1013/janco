@@ -41,6 +41,16 @@ Co-Janitors connects users with trained janitors using intelligent job schedulin
 
 ## 📦 Project Structure
 
+create a virtual env
+python3 -m venv venv
+
+activate virtual env
+source venv/bin/activate
+
+uvicorn app.main:app --reload
+pip install supabase
+pip list | grep supabase
+
 
 
 ## 💡 Use Cases
