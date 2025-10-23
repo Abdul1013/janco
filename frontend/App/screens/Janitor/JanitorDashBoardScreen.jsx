@@ -121,7 +121,7 @@ export default function JanitorDashBoardScreen({ navigation }) {
 
       <View style={styles.switchRow}>
         <Text style={Typography.subtitle}>Available for Jobs:</Text>
-        <Switch value={availability} onValueChange={updateAvailability} />
+        <Switch value={availability} onValueChange={toggleAvailability} />
       </View>
 
       <Text style={Typography.subtitle}>Quick Access</Text>
@@ -232,3 +232,21 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
+
+// navigation.navigate("ChatScreen", {
+//   jobId: job.id,
+//   receiverId: job.user_id,
+//   role: "janitor",
+// });
+
+//real time job update
+
+// useEffect(() => {
+//   const channel = supabase
+//     .channel(`janitor-jobs-${user.id}`)
+//     .on("postgres_changes", { event: "*", schema: "public", table: "jobs", filter: `janitor_id=eq.${user.id}` },
+//       (payload) => loadJobs()
+//     )
+//     .subscribe();
+//   return () => supabase.removeChannel(channel);
+// }, []);

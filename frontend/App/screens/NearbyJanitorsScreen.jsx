@@ -1,4 +1,3 @@
-// screens/NearbyJanitors.js
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -246,3 +245,15 @@ const styles = StyleSheet.create({
   priceNote: { color: "#333" },
   empty: { padding: 24, alignItems: "center" },
 });
+
+// Example: Booking Flow
+// User lands on the screen.
+// App fetches nearby janitors.
+// User taps "Select" on a janitor.
+// Confirmation dialog appears.
+// On confirm, booking request is sent.
+// On success, navigates to job status.
+// Suggestions
+// Error Handling: Consider more user-friendly error messages.
+// Location Defaults: Warn users if location is missing.
+// Accessibility: Add accessibility labels to buttons and images.
