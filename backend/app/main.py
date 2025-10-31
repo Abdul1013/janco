@@ -1,15 +1,27 @@
 from fastapi import FastAPI
-from app.api.nearby_janitors import router as nearby_janitors_router  # ✅ alias matches below
-from app.db.supabase_client import supabase  # Optional: for test route
+from fastapi.middleware.cors import CORSMiddleware
+from app.routes import job_routes, chat_routes, janitor_routes
 
-app = FastAPI()
+app = FastAPI(title="Janco Backend", version="1.0")
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+
+)
 
 # Include the /nearby-janitors route
-app.include_router(nearby_janitors_router)
+app.include_router(job_routes.router)
+app.include_router(chat_routes.router)
+app.include_router(janitor_routes.router)
 
 @app.get("/")
 def root():
-    return {"message": "Hello from Co‑Janitors backend"}
+    return {"status": "ok", "message": "Hello from Co‑Janitors backend"}
 
 @app.get("/test-connection")
 def test_connection():
