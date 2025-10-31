@@ -24,7 +24,8 @@ import Header from "../components/Header";
 import { Colors, Spacing, Typography } from "../components/theme/Theme";
 
 export default function ChatScreen({ route }) {
-  const { jobId, janitorId } = route.params;
+  const { jobId, receiverId, role } = route.params;
+  // const { jobId, janitorId } = route.params;
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
@@ -35,11 +36,11 @@ export default function ChatScreen({ route }) {
 
     //subscribe realtime
     const channel = supabase
-      .channel(`messages-job-${jobId}`)
+      .channel(`chat-${jobId}`)
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "messages",
           filter: `job_id=eq.${jobId}`,
@@ -64,33 +65,34 @@ export default function ChatScreen({ route }) {
     if (!error) setMessages(data);
   }
 
-  async function sendMessages() {
+  async function sendMessage() {
     if (!text.trim()) return;
 
     const { error } = await supabase.from("messages").insert([
       {
         job_id: jobId,
         sender_id: user.id,
+        receiver_id: receiverId,
         text,
       },
     ]);
-    if (!error) setText("");
+    if (!error) setText;
   }
 
   const renderItem = ({ item }) => (
     <View
       style={[
-        styles.msgBubble,
-        item.sender_id === user.id ? styles.mine : styles.theirs,
+          styles.message,
+        item.sender_id === user.id ? styles.myMessage : styles.theirMessage,
       ]}
     >
-      <Text style={Colors.dark.white}>{item.text}</Text>{" "}
+      <Text style={Colors.dark.white}>{item.text}</Text>
     </View>
   );
 
   return (
     <SafeAreaView style={Typography.container}>
-      <Header title={"Chat with Janitor"} />
+      <Header title={role === "user" ? "Chat with Janitor" : "Chat with Customer"} />
       <FlatList
         data={messages}
         renderItem={renderItem}
@@ -104,7 +106,7 @@ export default function ChatScreen({ route }) {
           onChangeText={setText}
           placeholder="Type a message....."
         />
-        <TouchableOpacity style={styles.sendBtn}>
+        <TouchableOpacity style={styles.sendBtn} onPress={sendMessage}>
           <Text style={Colors.dark.white}>Send</Text>
         </TouchableOpacity>
       </View>
@@ -112,21 +114,60 @@ export default function ChatScreen({ route }) {
   );
 }
 
+// const styles = StyleSheet.create({
+//   msgBubble: {
+//     padding: 10,
+//     borderRadius: 8,
+//     marginVertical: 4,
+//     maxWidth: "70%",
+//   },
+//   mine: { backgroundColor: "#00A86B", alignSelf: "flex-end" },
+//   theirs: { backgroundColor: "#666", alignSelf: "flex-start" },
+//   inputRow: {
+//     flexDirection: "row",
+//     padding: 10,
+//     borderTopWidth: 1,
+//     borderColor: "#ddd",
+//   },
+//   input: { flex: 1, borderWidth: 1, borderColor: "#ccc", borderRadius: 20, paddingHorizontal: 12 },
+//   sendBtn: { backgroundColor: "#00A86B", padding: 12, borderRadius: 20, marginLeft: 8 },
+// });
+
 const styles = StyleSheet.create({
-  msgBubble: {
+  container: { flex: 1, backgroundColor: "#f8f8f8" },
+  message: {
     padding: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     marginVertical: 4,
-    maxWidth: "70%",
+    maxWidth: "75%",
   },
-  mine: { backgroundColor: "#00A86B", alignSelf: "flex-end" },
-  theirs: { backgroundColor: "#666", alignSelf: "flex-start" },
+  myMessage: {
+    backgroundColor: "#00A86B",
+    alignSelf: "flex-end",
+  },
+  theirMessage: {
+    backgroundColor: "#666",
+    alignSelf: "flex-start",
+  },
+  msgText: { color: "#fff", fontSize: 15 },
   inputRow: {
     flexDirection: "row",
     padding: 10,
     borderTopWidth: 1,
     borderColor: "#ddd",
   },
-  input: { flex: 1, borderWidth: 1, borderColor: "#ccc", borderRadius: 20, paddingHorizontal: 12 },
-  sendBtn: { backgroundColor: "#00A86B", padding: 12, borderRadius: 20, marginLeft: 8 },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 25,
+    paddingHorizontal: 12,
+  },
+  sendBtn: {
+    backgroundColor: "#00A86B",
+    paddingHorizontal: 20,
+    justifyContent: "center",
+    borderRadius: 25,
+    marginLeft: 8,
+  },
 });

@@ -11,6 +11,7 @@ import JanitorStatusScreen from "../screens/JanitorStatusScreen";
 import JanitorDashBoardScreen from "../screens/Janitor/JanitorDashBoardScreen";
 import PriceEstimateScreen from "../screens/PriceEstimateScreen";
 import NearbyJanitors from "../screens/NearbyJanitorsScreen";
+import ChatScreen from "../screens/ChatScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -32,6 +33,7 @@ export default function RootNavigator() {
       <Stack.Screen name="JanitorDashboard" component={JanitorDashBoardScreen} />
       <Stack.Screen name="PriceEstimate" component={PriceEstimateScreen} />
       <Stack.Screen name="NearbyJanitors" component={NearbyJanitors} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
     </Stack.Navigator>
   );
 }

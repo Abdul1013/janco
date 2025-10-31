@@ -1,5 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header";
 import { Typography, Colors } from "../components/theme/Theme";
@@ -10,12 +17,15 @@ const API_BASE = process.env.API_URL || "https://api.yourdomain.com";
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
-  const toRad = v => (v * Math.PI) / 180;
+  const toRad = (v) => (v * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -51,7 +61,9 @@ export default function JobStatus() {
       const res = await fetch(`${API_BASE}/jobs/${job.id}`, {
         headers: {
           "Content-Type": "application/json",
-          ...(profile?.accessToken ? { Authorization: `Bearer ${profile.accessToken}` } : {}),
+          ...(profile?.accessToken
+            ? { Authorization: `Bearer ${profile.accessToken}` }
+            : {}),
         },
       });
       if (!res.ok) {
@@ -66,8 +78,14 @@ export default function JobStatus() {
   }
 
   function computeETAMinutes() {
-    if (!job?.janitor || !job.location || !job.janitor.lat || !job.janitor.lng) return null;
-    const distKm = haversineKm(job.location.lat, job.location.lng, job.janitor.lat, job.janitor.lng);
+    if (!job?.janitor || !job.location || !job.janitor.lat || !job.janitor.lng)
+      return null;
+    const distKm = haversineKm(
+      job.location.lat,
+      job.location.lng,
+      job.janitor.lat,
+      job.janitor.lng
+    );
     const avgSpeedKmph = 30; // assumption
     return Math.max(2, Math.round((distKm / avgSpeedKmph) * 60)); // at least 2 minutes
   }
@@ -85,7 +103,9 @@ export default function JobStatus() {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                ...(profile?.accessToken ? { Authorization: `Bearer ${profile.accessToken}` } : {}),
+                ...(profile?.accessToken
+                  ? { Authorization: `Bearer ${profile.accessToken}` }
+                  : {}),
               },
               body: JSON.stringify({ job_id: job.id }),
             });
@@ -130,27 +150,56 @@ export default function JobStatus() {
         <View style={styles.card}>
           <Text style={styles.label}>Janitor</Text>
           <Text style={styles.name}>{janitor.name || "—"}</Text>
-          <Text style={styles.sub}>{janitor.bio || janitor.about || "Professional cleaner"}</Text>
+          <Text style={styles.sub}>
+            {janitor.bio || janitor.about || "Professional cleaner"}
+          </Text>
 
-          <View style={{ flexDirection: "row", marginTop: 8, justifyContent: "space-between" }}>
+          <View
+            style={{
+              flexDirection: "row",
+              marginTop: 8,
+              justifyContent: "space-between",
+            }}
+          >
             <Text style={styles.muted}>Rating: {janitor.rating ?? "—"}</Text>
             <Text style={styles.muted}>ETA: {eta ? `${eta} min` : "—"}</Text>
           </View>
 
           <View style={{ marginTop: 12 }}>
-            <Text style={styles.label}>Scheduled: {job.scheduled_time || job.scheduled_date || "—"}</Text>
-            <Text style={styles.label}>Address: {job.location?.address_line || job.location?.city || "—"}</Text>
-            <Text style={[styles.label, { marginTop: 6 }]}>Notes: {job.metadata?.notes || job.notes || "—"}</Text>
+            <Text style={styles.label}>
+              Scheduled: {job.scheduled_time || job.scheduled_date || "—"}
+            </Text>
+            <Text style={styles.label}>
+              Address: {job.location?.address_line || job.location?.city || "—"}
+            </Text>
+            <Text style={[styles.label, { marginTop: 6 }]}>
+              Notes: {job.metadata?.notes || job.notes || "—"}
+            </Text>
           </View>
         </View>
 
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate("Chat", { janitorId: janitor.id, jobId: job.id })}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() =>
+              navigation.navigate("Chat", {
+                janitorId: janitor.id,
+                jobId: job.id,
+                role: "user",
+              })
+            }
+          >
             <Text style={styles.actionText}>Chat</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#ff6b6b" }]} onPress={cancelJob} disabled={loading}>
-            <Text style={styles.actionText}>{loading ? "Cancelling..." : "Cancel Job"}</Text>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: "#ff6b6b" }]}
+            onPress={cancelJob}
+            disabled={loading}
+          >
+            <Text style={styles.actionText}>
+              {loading ? "Cancelling..." : "Cancel Job"}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -160,12 +209,24 @@ export default function JobStatus() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: "#fff" },
-  card: { backgroundColor: "#fff", padding: 16, borderRadius: 10, elevation: 2, marginTop: 12 },
+  card: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 10,
+    elevation: 2,
+    marginTop: 12,
+  },
   label: { fontSize: 14, color: "#444", marginBottom: 6 },
   name: { fontSize: 18, fontWeight: "700" },
   sub: { color: "#666", marginTop: 6 },
   muted: { color: "#777" },
-  actionBtn: { backgroundColor: Colors.primary || "#00A86B", paddingVertical: 12, paddingHorizontal: 18, borderRadius: 8, marginTop: 14 },
+  actionBtn: {
+    backgroundColor: Colors.primary || "#00A86B",
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+    marginTop: 14,
+  },
   actionText: { color: "#fff", fontWeight: "700" },
 });
 
