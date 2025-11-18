@@ -8,13 +8,9 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "scheme": "janco",
-    "deepLinks": [
-      "janco://"
-    ],
     "splash": {
       "image": "./assets/logo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#121212"
+      "resizeMode": "contain"
     },
     "ios": {
       "supportsTablet": true,
@@ -24,11 +20,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#121212",
-        "permissions": [
-          "ACCESS_FINE_LOCATION"
-        ]
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#121212"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.abdulthedev.Janco"
