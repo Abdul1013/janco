@@ -9,6 +9,8 @@ import * as Linking from "expo-linking";
 
 import RootNavigator from "../navigation/RootNavigator";
 import AuthNavigator from "../navigation/AuthNavigator";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -51,7 +53,10 @@ export default function AppContent() {
 
   return (
     <NavigationContainer linking={linking}>
-      {user ? <RootNavigator /> : <AuthNavigator />}
+      <SafeAreaView style={{ flex: 1 }}>
+        <StatusBar hidden/>
+        {user ? <RootNavigator /> : <AuthNavigator />}
+      </SafeAreaView>
     </NavigationContainer>
   );
 }

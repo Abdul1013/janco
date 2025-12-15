@@ -12,25 +12,25 @@ import {
 
 import CheckBox, { Checkbox } from "expo-checkbox";
 import { Colors, Spacing, Typography } from "../components/theme/Theme";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../hooks/authContext";
-// import useJobs from "../hooks/useJob";
+import useJob from "../hooks/useJob";
 import Button from "../components/ui/Button";
 
 export default function BookingScreen({ navigation }) {
   const { profile, user } = useAuth();
-  // const { createJob } = useJobs();
+  const { createJob } = useJob();
 
   const [category, setCategory] = useState(null);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [notes, setNotes] = useState("");
+  const [isBooking, setIsBooking] = useState(false);
 
   //numeric inputs
-  const [rooms, setRooms] = useState("1");
-  const [toilets, setToilets] = useState("1");
+  const [rooms, setRooms] = useState("");
+  const [toilets, setToilets] = useState("");
   const [clothesCount, setClothesCount] = useState("0");
   const [extras, setExtras] = useState({
     kitchen: false,
@@ -106,42 +106,63 @@ export default function BookingScreen({ navigation }) {
 
   const handleBookingSubmit = async () => {
     try {
+      if (!category) {
+        Alert.alert("Validation Error", "Please select a service type");
+        return;
+      }
+      if (!date || !time) {
+        Alert.alert("Validation Error", "Please provide date and time");
+        return;
+      }
+
+      setIsBooking(true);
+
+      // Prepare booking data
       const bookingData = {
         service_type: category,
         scheduled_date: date,
-        address: profile?.address,
-        latitude: user?.lat,
-        longitude: user?.lng,
+        scheduled_time: time,
+        address: profile?.address || "",
+        latitude: user?.lat || 0,
+        longitude: user?.lng || 0,
         room_data: JSON.stringify([
-          { room: "bedroom", count: rooms },
-          { room: "toilet", count: toilets },
+          { room: "bedroom", count: parseInt(rooms || 0, 10) },
+          { room: "toilet", count: parseInt(toilets || 0, 10) },
         ]),
         extras: JSON.stringify(extras),
+        notes: notes,
       };
 
+      // Create job in database (optional - can skip if we just navigate with params)
       const created = await createJob(bookingData);
 
-      // 👇 Send form data along with job
-      navigation.navigate("EstimateScreen", {
-        job: created,
+      setIsBooking(false);
+
+      // Navigate to price estimate with all data
+      navigation.navigate("PriceEstimate", {
         category,
+        rooms: parseInt(rooms || 0, 10),
+        toilets: parseInt(toilets || 0, 10),
+        clothesCount: parseInt(clothesCount || 0, 10),
+        extras,
         date,
         time,
-        address: profile?.address,
-        userLocation: { lat: user?.lat, lng: user?.lng },
-        rooms,
-        toilets,
-        clothesCount,
-        // extras,
         notes,
+        address: profile?.address || "",
+        userLocation: { 
+          lat: user?.lat || 0, 
+          lng: user?.lng || 0 
+        },
       });
     } catch (err) {
-      Alert.alert("Booking Failed", "Please try again.");
+      setIsBooking(false);
+      console.error("Booking error:", err);
+      Alert.alert("Booking Error", err.message || "Please try again.");
     }
   };
 
   return (
-    <SafeAreaView style={[Typography.container, { marginBottom: -40 }]}>
+    <View style={[Typography.container, { marginBottom: -30 }]}>
       <Header title={"Book a Service"} />
       <Text style={Typography.header}>
         Choose a service category to begin booking
@@ -204,39 +225,15 @@ export default function BookingScreen({ navigation }) {
           />
         </View>
         <Button
-          title="Continue To Estimate"
+          title={isBooking ? "Processing..." : "Continue To Estimate"}
           variant="primary"
           size="lg"
           fullWidth
-          onPress={() => {if (!category) return Alert.alert("Please Select A service type ");
-            if(!date || !time) return Alert.alert("please Provide and time");
-
-            //convert numeric string to numbers
-             const parsedRooms = parseInt(rooms || "0", 10) || 0;
-            const parsedToilets = parseInt(toilets || "0", 10) || 0;
-            const parsedClothes = parseInt(clothesCount || "0", 10) || 0;
-
-         
-            navigation.navigate("PriceEstimate", {
-              category,
-              rooms,
-              toilets,
-              // clothesCount,
-              // extras,
-              date,
-              time,
-              notes,
-              address: profile?.address,
-              userLocation: {
-                lat: user?.lat || 0,
-                lng: user?.lng || 0,
-              },
-            })
-          }
-        }
+          onPress={handleBookingSubmit}
+          disabled={isBooking}
         />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -281,33 +278,63 @@ const styles = StyleSheet.create({
   },
 });
 
-function HouseCleaningForm({rooms,setRooms, toilets,setToilets,extras,setExtras}) {
-
+function HouseCleaningForm({
+  rooms,
+  setRooms,
+  toilets,
+  setToilets,
+  extras,
+  setExtras,
+}) {
   const [isChecked] = useState(false);
-
 
   return (
     <View>
-      <TextInput value={String(rooms)} onChangeText={setRooms} keyboardType="numeric" style={Typography.input} placeholder="How many rooms?" />
-      <TextInput value={String(toilets)} onChangeText={setToilets} keyboardType="numeric" style={Typography.input} placeholder="How many toilets?" placeholderTextColor={Colors.dark.accent} />
+      <TextInput
+        value={String(rooms)}
+        onChangeText={setRooms}
+        keyboardType="numeric"
+        style={Typography.input}
+        placeholder="How many rooms?"
+        placeholderTextColor={Colors.dark.accent}
+      />
+      <TextInput
+        value={String(toilets)}
+        onChangeText={setToilets}
+        keyboardType="numeric"
+        style={Typography.input}
+        placeholder="How many toilets?"
+        placeholderTextColor={Colors.dark.accent}
+      />
       <Text style={Typography.note}>Extras:</Text>
 
       <View style={Typography.checkBox}>
         <Text style={Typography.note}>Kitchen</Text>
-        <Checkbox value={extras.kitchen} onValueChange={(v) => setExtras({ ...extras, kitchen: v })} color={isChecked ? "#4630EB" : undefined} />
+        <Checkbox
+          value={extras.kitchen}
+          onValueChange={(v) => setExtras({ ...extras, kitchen: v })}
+          color={isChecked ? "#4630EB" : undefined}
+        />
       </View>
       <View style={Typography.checkBox}>
         <Text style={Typography.note}>Living Room</Text>
-        <Checkbox value={extras.livingRoom} onValueChange={(v) => setExtras({ ...extras, livingRoom: v })} color={isChecked ? "#4630EB" : undefined} />
+        <Checkbox
+          value={extras.livingRoom}
+          onValueChange={(v) => setExtras({ ...extras, livingRoom: v })}
+          color={isChecked ? "#4630EB" : undefined}
+        />
       </View>
       <View style={Typography.checkBox}>
         <Text style={Typography.note}>Window Cleaning</Text>
-        <CheckBox value={extras.windowCleaning} onValueChange={(v) => setExtras({ ...extras, windowCleaning: v })} color={isChecked ? "#4630EB" : undefined} />
+        <CheckBox
+          value={extras.windowCleaning}
+          onValueChange={(v) => setExtras({ ...extras, windowCleaning: v })}
+          color={isChecked ? "#4630EB" : undefined}
+        />
       </View>
     </View>
-
   );
-};
+}
 
 function LaundryForm({ clothesCount, setClothesCount }) {
   const [clothTypes, setClothTypes] = useState({
@@ -320,53 +347,109 @@ function LaundryForm({ clothesCount, setClothesCount }) {
     ironing: false,
     hangDry: false,
   });
-  const [notes, setNotes] = useState("");
+  // const [notes, setNotes] = useState("");
 
   return (
-    <View>
-      <Text>How many clothes?</Text>
+    <View style={Typography.subtitle}>
+      <Text style={Typography.note}>How many clothes?</Text>
       <TextInput
         value={String(clothesCount)}
         onChangeText={setClothesCount}
         keyboardType="numeric"
-      />
-      <Text>Cloth Types:</Text>
-      <Checkbox
-        label="Shirts"
-        value={clothTypes.shirts}
-        onValueChange={(v) => setClothTypes({ ...clothTypes, shirts: v })}
-      />
-      <Checkbox
-        label="Trousers"
-        value={clothTypes.trousers}
-        onValueChange={(v) => setClothTypes({ ...clothTypes, trousers: v })}
-      />
-      <Checkbox
-        label="Bedsheets"
-        value={clothTypes.bedsheets}
-        onValueChange={(v) => setClothTypes({ ...clothTypes, bedsheets: v })}
-      />
-      <Checkbox
-        label="Delicates"
-        value={clothTypes.delicates}
-        onValueChange={(v) => setClothTypes({ ...clothTypes, delicates: v })}
+        style={Typography.input}
+        placeholder="Number of items"
+        placeholderTextColor={Colors.dark.accent}
       />
 
-      <Text>Extra Services:</Text>
-      <Checkbox
-        label="Ironing"
-        value={extraServices.ironing}
-        onValueChange={(v) =>
-          setExtraServices({ ...extraServices, ironing: v })
-        }
-      />
-      <Checkbox
-        label="Hang Dry"
-        value={extraServices.hangDry}
-        onValueChange={(v) =>
-          setExtraServices({ ...extraServices, hangDry: v })
-        }
-      />
+      <Text style={[Typography.note, { marginTop: 8 }]}>Cloth Types:</Text>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginVertical: 6,
+        }}
+      >
+        <Checkbox
+          value={clothTypes.shirts}
+          onValueChange={(v) => setClothTypes({ ...clothTypes, shirts: v })}
+        />
+        <Text style={[Typography.note, { marginLeft: 8 }]}>Shirts</Text>
+      </View>
+
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginVertical: 6,
+        }}
+      >
+        <Checkbox
+          value={clothTypes.trousers}
+          onValueChange={(v) => setClothTypes({ ...clothTypes, trousers: v })}
+        />
+        <Text style={[Typography.note, { marginLeft: 8 }]}>Trousers</Text>
+      </View>
+
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginVertical: 6,
+        }}
+      >
+        <Checkbox
+          value={clothTypes.bedsheets}
+          onValueChange={(v) => setClothTypes({ ...clothTypes, bedsheets: v })}
+        />
+        <Text style={[Typography.note, { marginLeft: 8 }]}>Bedsheets</Text>
+      </View>
+
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginVertical: 6,
+        }}
+      >
+        <Checkbox
+          value={clothTypes.delicates}
+          onValueChange={(v) => setClothTypes({ ...clothTypes, delicates: v })}
+        />
+        <Text style={[Typography.note, { marginLeft: 8 }]}>Delicates</Text>
+      </View>
+
+      <Text style={[Typography.note, { marginTop: 12 }]}>Extra Services:</Text>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginVertical: 6,
+        }}
+      >
+        <Checkbox
+          value={extraServices.ironing}
+          onValueChange={(v) =>
+            setExtraServices({ ...extraServices, ironing: v })
+          }
+        />
+        <Text style={[Typography.note, { marginLeft: 8 }]}>Ironing</Text>
+      </View>
+
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginVertical: 6,
+        }}
+      >
+        <Checkbox
+          value={extraServices.hangDry}
+          onValueChange={(v) =>
+            setExtraServices({ ...extraServices, hangDry: v })
+          }
+        />
+        <Text style={[Typography.note, { marginLeft: 8 }]}>Hang Dry</Text>
+      </View>
     </View>
   );
-};
+}
