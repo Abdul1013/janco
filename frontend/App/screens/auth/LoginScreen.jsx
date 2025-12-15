@@ -53,8 +53,8 @@ export default function LoginScreen() {
           <Image
             resizeMode="contain"
             style={{
-              height: 220,
-              width: 220,
+              height: 120,
+              width: 120,
             }}
             source={require("../../../assets/logo.png")}
           />
@@ -66,13 +66,11 @@ export default function LoginScreen() {
         >
           <Text
             
-            style={{
-              alignSelf: "center",
-              padding: 30,
-            }}
+            style={
+            Typography.header}
            
           >
-            Login
+            Login to Get Started
           </Text>
           <Text   style={Typography.subtitle}>Email</Text>
           <TextInput
@@ -109,18 +107,15 @@ export default function LoginScreen() {
               justifyContent: "center",
             }}
           >
-            <Text size="md">Don't have an account?</Text>
+            <Text style={Typography.note}>Don't have an account?</Text>
             <TouchableOpacity
               onPress={() => {
                 navigation.navigate("Signup");
               }}
             >
               <Text
-                size="md"
-                fontWeight="bold"
-                style={{
-                  marginLeft: 5,
-                }}
+               
+                style={Typography.link}
               >
                 Register here
               </Text>
@@ -139,7 +134,7 @@ export default function LoginScreen() {
                 navigation.navigate("ForgetPassword");
               }}
             >
-              <Text size="md" fontWeight="bold">
+              <Text style={Typography.note}>
                 Forget password
               </Text>
             </TouchableOpacity>

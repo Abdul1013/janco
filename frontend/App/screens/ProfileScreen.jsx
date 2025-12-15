@@ -1,6 +1,6 @@
 // screens/ProfileScreen.js
 import React from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from "react-native";
 import { Colors, Spacing, Typography } from "../components/theme/Theme";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -17,7 +17,7 @@ export default function ProfileScreen({ navigation }) {
   const { logout, profile } = useAuth();
 
   return (
-    <SafeAreaView style={Typography.container}>
+    <ScrollView style={Typography.container}>
       <Header title={profile?.user_name} />
       <View style={styles.cardContainer}>
         <Image source={{ uri: user.avatar }} style={styles.avatar} />
@@ -64,7 +64,7 @@ export default function ProfileScreen({ navigation }) {
 
         <Text style={Typography.link}>version 1.0.0 beta</Text>
       </View>
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 const styles = StyleSheet.create({
