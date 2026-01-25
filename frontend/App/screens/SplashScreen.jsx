@@ -1,21 +1,21 @@
-import Reactq from "react";
-import { View,ActivityIndicator } from "react-native";
-import { useAuth } from "../hooks/useAuth";
+import React, { useEffect } from "react";
+import { View, ActivityIndicator } from "react-native";
+import { useAuth } from "../hooks/authContext";
 import { useNavigation } from "@react-navigation/native";
 
-export default function SplashScreen(  ){
-    const {user, loading} = useAuth();
-    const navigation = useNavigation();
+export default function SplashScreen() {
+  const { user, loading } = useAuth();
+  const navigation = useNavigation();
 
-    useEffect(() => {
+  useEffect(() => {
     if (!loading) {
       if (user) {
-        navigation.replace('Home')  // or check if profile exists
+        navigation.replace('MainTabs');
       } else {
-        navigation.replace('Login')
+        navigation.replace('Login');
       }
     }
-  }, [loading, user])
+  }, [loading, user]);
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>

@@ -47,16 +47,22 @@ export function useAuth() {
   useEffect(() => {
     //persist session to avoid re login 
     const getSession = async () => {
-      const { data: sessionData, error } = await supabase.auth.getSession();
-      const currentUser = sessionData?.session?.user;
+      try {
+        const { data: sessionData, error } = await supabase.auth.getSession();
+        const currentUser = sessionData?.session?.user;
 
-      setUser(currentUser);
-      if (currentUser) {
-        const userProfile = await getUserProfile(currentUser.id);
-        setProfile(userProfile);
+        setUser(currentUser);
+        if (currentUser) {
+          const userProfile = await getUserProfile(currentUser.id);
+          setProfile(userProfile);
+        }
+      } catch (error) {
+        console.error("Session fetch error:", error);
+        setUser(null);
+        setProfile(null);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     getSession();

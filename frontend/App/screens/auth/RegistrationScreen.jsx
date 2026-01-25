@@ -10,6 +10,7 @@ import {
 import { useAuth } from "../../hooks/authContext";
 import { supabase } from "../../lib/supabase";
 import useUserLocation from "../../hooks/useUserLocation";
+import { Typography } from "../../components/theme/Theme";
 // import
 export default function RegistrationScreen({ navigation }) {
   const { user, getUserProfile } = useAuth();
@@ -87,7 +88,7 @@ export default function RegistrationScreen({ navigation }) {
         placeholder="Nearest LandMark"
         value={landmark}
         onChangeText={setLandmark}
-        style={styles.input}
+        style={Typography.input}
       />
 
       <TouchableOpacity
