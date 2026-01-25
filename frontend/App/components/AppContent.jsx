@@ -52,7 +52,7 @@ export default function AppContent() {
   }
 
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer>
       <SafeAreaView style={{ flex: 1 }}>
         <StatusBar hidden/>
         {user ? <RootNavigator /> : <AuthNavigator />}

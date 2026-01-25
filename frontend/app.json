@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to personalize services."
-      }
+      },
+      "bundleIdentifier": "com.abdulthedev.Janco"
     },
     "android": {
       "adaptiveIcon": {
