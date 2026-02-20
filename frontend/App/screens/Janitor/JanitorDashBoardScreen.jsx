@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   ScrollView,
 } from "react-native";
-import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../hooks/authContext";
 import { useJanitorProfile } from "../../hooks/useJanitors";
 import { Colors, Spacing, Typography } from "../../components/theme/Theme";
@@ -117,7 +116,8 @@ export default function JanitorDashBoardScreen({ navigation }) {
 
   return (
     <SafeAreaView style={Typography.container}>
-      <Header title="🧹 Janitor Dashboard" />
+      <Header title=" Janitor Dashboard" />
+      <Text style={Typography.subtitle}> welcome {user?.email}</Text>
 
       <View style={styles.switchRow}>
         <Text style={Typography.subtitle}>Available for Jobs:</Text>
@@ -139,8 +139,8 @@ export default function JanitorDashBoardScreen({ navigation }) {
         ))}
       </View>
 
-      <Text style={Typography.subtitle}>Upcoming Jobs</Text>
-      <FlatList
+        <Text style={{...Typography.subtitle, marginTop: -49, textAlign: "center", marginBottom: Spacing.xs}}>Upcoming Jobs</Text>
+        <FlatList
         // data={jobs}
         showsVerticalScrollIndicator={false}
         data={dummyData}
@@ -197,9 +197,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     padding: 12,
-    borderRadius: 8,
+    borderRadius: Spacing.md,
     marginBottom: 12,
-    backgroundColor: Colors.dark.secondary,
+    backgroundColor: Colors.dark.accent,
   },
   jobText: { fontWeight: "bold", marginBottom: 4 },
   grid: {
