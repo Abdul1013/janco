@@ -8,11 +8,11 @@ import {
   Button,
   Alert,
 } from "react-native";
-import { supabase } from "../lib/supabase";
-import { useAuth } from "../hooks/authContext";
+import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../hooks/authContext";
 import { useNavigation } from "@react-navigation/native";
-import { Typography } from "../components/theme/Theme";
-import Header from "../components/Header";
+import { Typography } from "../../components/theme/Theme";
+import Header from "../../components/Header";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function JanitorStatusScreen() {
@@ -36,7 +36,7 @@ export default function JanitorStatusScreen() {
 
       if (data.status === "approved") {
         Alert.alert(
-          "🎉 You’re now a Janitor!",
+          "You’re now a Janitor!",
           "Redirecting to your dashboard..."
         );
         navigation.replace("JanitorDashboard");
@@ -51,18 +51,13 @@ export default function JanitorStatusScreen() {
     }
   };
 
-  // useEffect(() => {
-  //   const interval = setInterval(checkApprovalStatus, 100000); // check every 10s
-  //   return () => clearInterval(interval); // cleanup
-  // }, []);
-
   return (
     <SafeAreaView style={Typography.container}>
       <Header title="Application Status" />
       <View style={{ flex:1 ,alignItems: "center", justifyContent: "center" }}>
         <Text style={Typography.subtitle}>Application Received!</Text>
         <Image
-          source={require("../../assets/approval.png")} // optional image
+          source={require("../../../assets/approval.png")} // optional image
           style={styles.image}
           resizeMode="contain"
         />
