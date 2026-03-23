@@ -1,119 +1,116 @@
-import React, { useState } from "react";
-import { View, TouchableOpacity, KeyboardAvoidingView, Image, Text,TextInput } from "react-native";
-import { supabase } from '../../lib/supabase'
-import { Typography } from "../../components/theme/Theme";
-import { useNavigation } from "@react-navigation/native";
-export default function SigupScreen() {
-    const navigation = useNavigation()
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
-    const [loading, setLoading] = useState(false)
+/**
+ * SignupScreen — Sprint 3 rebuild.
+ *
+ * Uses ScreenWrapper, AppInput, AppButton, AppText.
+ * Input validation: email format, password min 8 chars, name required.
+ * Calls authStore.signup() on submit.
+ *
+ * @module screens/auth/SignupScreen
+ */
 
-    async function register() {
-        setLoading(true)
-        const { user, error } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-        })
+import React, { useState } from 'react';
+import { View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { useTheme } from '../../constants/theme/ThemeContext';
+import useAuthStore from '../../store/authStore';
+import ScreenWrapper from '../../components/ui/ScreenWrapper';
+import AppInput from '../../components/ui/AppInput';
+import AppButton from '../../components/ui/AppButton';
+import AppText from '../../components/ui/AppText';
 
-        if (!error && !user) {
-            setLoading(false);
-            alert("check your email for login link")
-        }
-        if (error) {
-            setLoading(false)
-            alert(error.message)
-        }
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+export default function SignupScreen() {
+  const navigation = useNavigation();
+  const { colors, spacing } = useTheme();
+  const signup = useAuthStore((s) => s.signup);
+
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const validate = () => {
+    const e = {};
+    if (!fullName.trim()) e.fullName = 'Name is required.';
+    if (!EMAIL_RE.test(email.trim())) e.email = 'Enter a valid email address.';
+    if (password.length < 8) e.password = 'Password must be at least 8 characters.';
+    if (password !== confirmPassword) e.confirmPassword = 'Passwords do not match.';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSignup = async () => {
+    if (!validate()) return;
+    setLoading(true);
+    const result = await signup(email.trim(), password, fullName.trim());
+    setLoading(false);
+    if (result?.error) {
+      setErrors({ api: result.error });
     }
+  };
 
-    return (
-        <KeyboardAvoidingView behavior="height" enabled style={{ flex: 1 }}>
-            <View style={Typography.container}>
-                <Text
-                    fontWeight="bold"
-                    size="h3"
-                    style={{
-                        alignSelf: "center",
-                        padding: 30,
-                    }}
-                >
-                    Register
-                </Text>
-                <Text>Email</Text>
-                <TextInput
-                  
-                    placeholder="Enter your email"
-                    value={email}
-                    autoCapitalize="none"
-                    autoCompleteType="off"
-                    autoCorrect={false}
-                    keyboardType="email-address"
-                    onChangeText={(text) => setEmail(text)}
-                    style={Typography.input}
-                />
+  return (
+    <ScreenWrapper avoidKeyboard>
+      <View style={{ flex: 1, justifyContent: 'center', padding: spacing.md }}>
+        <AppText variant="headlineMedium" style={{ marginBottom: spacing.lg, color: colors.onBackground }}>
+          Create Account
+        </AppText>
 
-                <Text style={{ marginTop: 15 }}>Password</Text>
-                <TextInput
-                  
-                    placeholder="Enter your password"
-                    value={password}
-                    autoCapitalize="none"
-                    autoCompleteType="off"
-                    autoCorrect={false}
-                    secureTextEntry={true}
-                    onChangeText={(text) => setPassword(text)}
-                    style={Typography.input}
+        <AppInput
+          label="Full Name"
+          value={fullName}
+          onChangeText={setFullName}
+          error={errors.fullName}
+          inputProps={{ autoCapitalize: 'words', placeholder: 'Your full name' }}
+        />
+        <AppInput
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          error={errors.email}
+          inputProps={{ autoCapitalize: 'none', keyboardType: 'email-address', placeholder: 'Your email' }}
+        />
+        <AppInput
+          label="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          error={errors.password}
+          inputProps={{ placeholder: 'Min 8 characters' }}
+        />
+        <AppInput
+          label="Confirm Password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
+          error={errors.confirmPassword}
+          inputProps={{ placeholder: 'Re-enter password' }}
+        />
 
-                />
-                <TouchableOpacity
-                
-                    onPress={() => {
-                        register();
-                    }}
-                    style={{
-                        marginTop: 20,
-                    }}
-                    disabled={loading}
-                > <Text>
-                    {loading ? "Loading" : "Create an account"}</Text></TouchableOpacity>
+        {errors.api ? (
+          <AppText variant="bodySmall" style={{ color: colors.error, marginBottom: spacing.sm }}>
+            {errors.api}
+          </AppText>
+        ) : null}
 
-                <View
-                    style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        marginTop: 15,
-                        justifyContent: "center",
-                    }}
-                >
-                    <Text size="md">Already have an account?</Text>
-                    <TouchableOpacity
-                        onPress={() => {
-                            navigation.navigate("Login");
-                        }}
-                    >
-                        <Text
-                            size="md"
-                            fontWeight="bold"
-                            style={{
-                                marginLeft: 5,
-                            }}
-                        >
-                            Login here
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-                <View
-                    style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        marginTop: 30,
-                        justifyContent: "center",
-                    }}
-                >
-                   
-                </View>
-            </View>
-        </KeyboardAvoidingView>
-    )
+        <AppButton title="Create Account" onPress={handleSignup} loading={loading} />
+
+        <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: spacing.md }}>
+          <AppText variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+            Already have an account?{' '}
+          </AppText>
+          <AppText
+            variant="bodyMedium"
+            style={{ color: colors.primary, fontWeight: '600' }}
+            onPress={() => navigation.navigate('Login')}
+          >
+            Login here
+          </AppText>
+        </View>
+      </View>
+    </ScreenWrapper>
+  );
 }

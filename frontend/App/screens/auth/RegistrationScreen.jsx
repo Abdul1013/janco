@@ -1,150 +1,124 @@
-import React, { useState, useEffect} from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
-import { useAuth } from "../../hooks/authContext";
-import { supabase } from "../../lib/supabase";
-import useUserLocation from "../../hooks/useUserLocation";
-import { Typography } from "../../components/theme/Theme";
-// import
-export default function RegistrationScreen({ navigation }) {
-  const { user, getUserProfile } = useAuth();
+/**
+ * RegistrationScreen — Sprint 3 rebuild.
+ *
+ * Post-signup profile completion. Uses authStore.updateProfile()
+ * to upsert profile fields via the backend API.
+ * Zero direct Supabase calls. All styles from useTheme().
+ *
+ * @module screens/auth/RegistrationScreen
+ */
+
+import React, { useState, useEffect } from 'react';
+import { View } from 'react-native';
+import { useTheme } from '../../constants/theme/ThemeContext';
+import { useAuth } from '../../hooks/authContext';
+import useAuthStore from '../../store/authStore';
+import useUserLocation from '../../hooks/useUserLocation';
+import ScreenWrapper from '../../components/ui/ScreenWrapper';
+import AppInput from '../../components/ui/AppInput';
+import AppButton from '../../components/ui/AppButton';
+import AppText from '../../components/ui/AppText';
+
+export default function RegistrationScreen() {
+  const { colors, spacing } = useTheme();
+  const { user } = useAuth();
+  const updateProfile = useAuthStore((s) => s.updateProfile);
   const { address, coords, errorMsg: locationError } = useUserLocation();
-  const [userName, setUserName] = useState("");
-  const [phone, setPhone] = useState("");
-  // const [address, setAddress] = useState("");
-  const [userAddress, setUserAddress] = useState("");
-  const [landmark, setLandmark] = useState("");
+
+  const [userName, setUserName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [userAddress, setUserAddress] = useState('');
+  const [landmark, setLandmark] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (address) setUserAddress(address);
   }, [address]);
 
-  const handleRegistration = async () => {
-    const { lat, lng } = coords;
+  const validate = () => {
+    const e = {};
+    if (!userName.trim()) e.userName = 'Username is required.';
+    if (!phone.trim()) e.phone = 'Phone number is required.';
+    if (!userAddress.trim()) e.userAddress = 'Address is required.';
+    if (!landmark.trim()) e.landmark = 'Landmark is required.';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
-    if (!userName || !phone || !address || !landmark)
-      return alert("Please fill all fields");
+  const handleRegistration = async () => {
+    if (!validate()) return;
     setLoading(true);
-    const { error } = await supabase.from("profiles").upsert({
-      id: user.id,
-      user_name: userName,
-      phone,
-      address: userAddress,
-      landmark,
-      lat,
-      lng,
+
+    const result = await updateProfile({
+      user_name: userName.trim(),
+      phone: phone.trim(),
+      address: userAddress.trim(),
+      landmark: landmark.trim(),
+      lat: coords?.lat ?? 0,
+      lng: coords?.lng ?? 0,
       is_registered: true,
     });
 
     setLoading(false);
-    if (error) {
-      console.error(error);
-      alert("failed to save profile");
-    } else {
-      await getUserProfile(user.id);
 
-      alert("Registration successful!");
+    if (result?.error) {
+      setErrors({ api: result.error });
     }
+    // On success, authStore updates profile.is_registered → RootNavigator
+    // automatically navigates to MainStack.
   };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Complete Your Registration</Text>
+    <ScreenWrapper avoidKeyboard>
+      <View style={{ flex: 1, justifyContent: 'center', padding: spacing.md }}>
+        <AppText variant="headlineMedium" style={{ marginBottom: spacing.lg, color: colors.onBackground }}>
+          Complete Your Registration
+        </AppText>
 
-      <TextInput
-        placeholder="User Name"
-        value={userName}
-        onChangeText={setUserName}
-        style={styles.input}
-      />
+        <AppInput
+          label="Username"
+          value={userName}
+          onChangeText={setUserName}
+          error={errors.userName}
+          inputProps={{ autoCapitalize: 'none', placeholder: 'Choose a username' }}
+        />
+        <AppInput
+          label="Phone Number"
+          value={phone}
+          onChangeText={setPhone}
+          error={errors.phone}
+          inputProps={{ keyboardType: 'phone-pad', placeholder: 'Your phone number' }}
+        />
+        <AppInput
+          label="Address"
+          value={userAddress}
+          onChangeText={setUserAddress}
+          error={errors.userAddress}
+          inputProps={{ placeholder: 'Your address' }}
+        />
+        <AppInput
+          label="Nearest Landmark"
+          value={landmark}
+          onChangeText={setLandmark}
+          error={errors.landmark}
+          inputProps={{ placeholder: 'e.g. Unity Bank, Tanke' }}
+        />
 
-      <TextInput
-        placeholder="Phone Number"
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-        style={styles.input}
-      />
-      {/* <TextInput
-        placeholder="Address"
-        value={address}
-        onChangeText={setAddress}
-        style={styles.input}
-      /> */}
+        {locationError ? (
+          <AppText variant="bodySmall" style={{ color: colors.error, marginBottom: spacing.sm }}>
+            {locationError}
+          </AppText>
+        ) : null}
 
-      <TextInput
-        placeholder="Address"
-        value={userAddress}
-        onChangeText={setUserAddress} // Allow user to edit manually
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Nearest LandMark"
-        value={landmark}
-        onChangeText={setLandmark}
-        style={Typography.input}
-      />
+        {errors.api ? (
+          <AppText variant="bodySmall" style={{ color: colors.error, marginBottom: spacing.sm }}>
+            {errors.api}
+          </AppText>
+        ) : null}
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleRegistration}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Submit</Text>
-        )}
-      </TouchableOpacity>
-      {locationError && <Text style={{ color: "red" }}>{locationError}</Text>}
-    </View>
+        <AppButton title="Submit" onPress={handleRegistration} loading={loading} />
+      </View>
+    </ScreenWrapper>
   );
 }
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 30,
-    textAlign: "center",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 14,
-    borderRadius: 8,
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: "#4a90e2",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-});
-// import Toast from 'react-native-toast-message';
-
-// Toast.show({
-//   type: 'error',
-//   text1: 'Error',
-//   text2: 'Failed to save profile',
-// });
-
-// const [userName, setUserName] = useState(user?.user_metadata?.full_name || "");
