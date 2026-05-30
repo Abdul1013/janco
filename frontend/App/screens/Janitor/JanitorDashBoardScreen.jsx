@@ -1,252 +1,223 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  Switch,
-  FlatList,
-  Button,
-  StyleSheet,
-  Alert,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
-import { useAuth } from "../../hooks/authContext";
-import { useJanitorProfile } from "../../hooks/useJanitors";
-import { Colors, Spacing, Typography } from "../../components/theme/Theme";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Header from "../../components/Header";
-import { MaterialIcons } from "@expo/vector-icons";
+import React from 'react';
+import { Alert, FlatList, RefreshControl, Switch, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '../../constants/theme/ThemeContext';
+import { useAuth } from '../../hooks/authContext';
+import { useJanitorProfile } from '../../hooks/useJanitors';
+import ScreenWrapper from '../../components/ui/ScreenWrapper';
+import AppCard from '../../components/ui/AppCard';
+import AppText from '../../components/ui/AppText';
+import AppButton from '../../components/ui/AppButton';
+import EmptyState from '../../components/ui/EmptyState';
 
-const box = [
-  {
-    title: "History",
-    icon: (
-      <MaterialIcons name="history" size={28} color={Colors.dark.cardBorder} />
-    ),
-    body: "View Job History",
-    onPress: "History",
-  },
-  {
-    title: "Earnings",
-    icon: (
-      <MaterialIcons
-        name="account-balance-wallet"
-        size={28}
-        color={Colors.dark.cardBorder}
-      />
-    ),
-    body: "This Month: ₦0.00",
-    onPress: "Earnings",
-  },
-  {
-    title: "Messages",
-    icon: (
-      <MaterialIcons name="message" size={28} color={Colors.dark.cardBorder} />
-    ),
-    body: "Open Jobs Chat",
-    onPress: "Chat",
-  },
-  {
-    title: "Ratings",
-    icon: (
-      <MaterialIcons name="star" size={28} color={Colors.dark.cardBorder} />
-    ),
-    body: "Your Average Rating is: 4.1",
-    onPress: "Ratings",
-  },
-];
+const STATUS_META = {
+  pending:     { label: 'New',       bg: '#FFF3E0', text: '#E65100' },
+  confirmed:   { label: 'Confirmed', bg: '#E3F2FD', text: '#1565C0' },
+  in_progress: { label: 'Active',    bg: '#E8F5E9', text: '#2E7D32' },
+  completed:   { label: 'Completed', bg: '#F3E5F5', text: '#6A1B9A' },
+  cancelled:   { label: 'Cancelled', bg: '#FFEBEE', text: '#B71C1C' },
+};
 
-
-const dummyData = [
-  {
-    id: "1",
-    service_type: "House Cleaning",
-    scheduled_date: "2025-10-01T10:00:00Z",
-    location: "Ibadan, Nigeria",
-    status: "pending",
-  },
-  {
-    id: "2",
-    service_type: "Laundry Service",
-    scheduled_date: "2025-10-03T14:30:00Z",
-    location: "Lagos, Nigeria",
-    status: "in-progress",
-  },
-  {
-    id: "3",
-    service_type: "Fumigation",
-    scheduled_date: "2025-10-05T09:00:00Z",
-    location: "Abuja, Nigeria",
-    status: "assigned",
-  },
-  {
-    id: "4",
-    service_type: "Office Cleaning",
-    scheduled_date: "2025-10-08T11:15:00Z",
-    location: "Port Harcourt, Nigeria",
-    status: "completed",
-  },
-];
-
-
-export default function JanitorDashBoardScreen({ navigation }) {
-  const { user } = useAuth();
+export default function JanitorDashBoardScreen() {
+  const navigation = useNavigation();
+  const { colors, spacing } = useTheme();
+  const { profile: authProfile } = useAuth();
   const {
-    jobs,
-    availability,
-    updateAvailability,
-    completeJob,
-    reviews,
-    jobHistory,
-    earnings,
-  } = useJanitorProfile();
+    profile, availability, updateAvailability,
+    jobs, loading, refresh, refreshing,
+    acceptJob, startJob, completeJob,
+  } = useJanitorProfile(authProfile?.id);
 
-  const handleComplete = async (id) => {
-    await completeJob(id);
-    Alert.alert("Job marked as complete");
-  };
+  const activeJobs  = jobs.filter(j => j.status === 'in_progress');
+  const pendingJobs = jobs.filter(j => j.status === 'pending');
+  const completedCount = jobs.filter(j => j.status === 'completed').length;
+  const displayJobs = [...activeJobs, ...pendingJobs].slice(0, 5);
 
   const toggleAvailability = () => {
-    updateAvailability();
+    const next = !availability;
+    updateAvailability(next);
     Alert.alert(
-      "Availability updated",
-      availability ? "You are now unavailable" : "You are now available"
+      'Availability Updated',
+      next ? 'You are now visible to customers.' : 'You are now offline.',
+    );
+  };
+
+  const handleAction = (label, action, jobId) => {
+    Alert.alert(label, 'Confirm action?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Yes',
+        onPress: async () => {
+          const err = await action(jobId);
+          if (err) Alert.alert('Failed', err);
+        },
+      },
+    ]);
+  };
+
+  const renderJob = ({ item }) => {
+    const meta = STATUS_META[item.status] || STATUS_META.pending;
+    const isPending   = item.status === 'pending';
+    const isConfirmed = item.status === 'confirmed';
+    const isActive    = item.status === 'in_progress';
+
+    return (
+      <AppCard elevation={1} style={{ marginBottom: spacing.sm }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.xs }}>
+          <View style={{ flex: 1, marginRight: spacing.sm }}>
+            <AppText variant="bodyLarge" style={{ color: colors.onSurface, fontWeight: '700', textTransform: 'capitalize' }}>
+              {(item.service_type || 'Service').replace(/_/g, ' ')}
+            </AppText>
+            {item.customer_name ? (
+              <AppText variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+                {item.customer_name}
+              </AppText>
+            ) : null}
+            <AppText variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+              {item.scheduled_date
+                ? new Date(item.scheduled_date).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })
+                : '—'}
+              {item.scheduled_time ? `  ·  ${item.scheduled_time}` : ''}
+            </AppText>
+            {item.address ? (
+              <AppText variant="bodySmall" style={{ color: colors.onSurfaceVariant }} numberOfLines={1}>
+                {item.address}
+              </AppText>
+            ) : null}
+          </View>
+          <View style={{ backgroundColor: meta.bg, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+            <AppText variant="bodySmall" style={{ color: meta.text, fontWeight: '700', fontSize: 11 }}>
+              {meta.label}
+            </AppText>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+          <AppButton
+            title="Chat"
+            variant="outlined"
+            onPress={() => navigation.navigate('Chat', {
+              jobId: item.id,
+              role: 'janitor',
+              otherName: item.customer_name || 'Customer',
+            })}
+            style={{ flex: 1, minHeight: 36 }}
+          />
+          {isPending && (
+            <AppButton
+              title="Accept"
+              onPress={() => handleAction('Accept Job', acceptJob, item.id)}
+              style={{ flex: 1, minHeight: 36 }}
+            />
+          )}
+          {isConfirmed && (
+            <AppButton
+              title="Start"
+              onPress={() => handleAction('Start Job', startJob, item.id)}
+              style={{ flex: 1, minHeight: 36 }}
+            />
+          )}
+          {isActive && (
+            <AppButton
+              title="Complete"
+              onPress={() => handleAction('Mark Complete', completeJob, item.id)}
+              style={{ flex: 1, minHeight: 36 }}
+            />
+          )}
+        </View>
+      </AppCard>
     );
   };
 
   return (
-    <SafeAreaView style={Typography.container}>
-      <Header title=" Janitor Dashboard" />
-      <Text style={Typography.subtitle}> welcome {user?.email}</Text>
-
-      <View style={styles.switchRow}>
-        <Text style={Typography.subtitle}>Available for Jobs:</Text>
-        <Switch value={availability} onValueChange={toggleAvailability} />
+    <ScreenWrapper refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}>
+      {/* Greeting */}
+      <View style={{ marginBottom: spacing.md }}>
+        <AppText variant="headlineSmall" style={{ color: colors.onBackground, fontWeight: '700' }}>
+          Hello, {profile?.full_name?.split(' ')[0] || authProfile?.full_name?.split(' ')[0] || 'Janitor'} 👋
+        </AppText>
+        <AppText variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>
+          {availability ? 'You\'re online and visible to customers' : 'You\'re currently offline'}
+        </AppText>
       </View>
 
-      <Text style={Typography.subtitle}>Quick Access</Text>
-      <View style={styles.grid}>
-        {box.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.box}
-            onPress={() => navigation.navigate(item.onPress)}
-          >
-            {item.icon}
-            <Text style={Typography.defaultSemiBold}>{item.title}</Text>
-            <Text style={Typography.note}>{item.body}</Text>
-          </TouchableOpacity>
-        ))}
+      {/* Stats row */}
+      <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }}>
+        <AppCard elevation={1} style={{ flex: 1, alignItems: 'center', paddingVertical: spacing.md }}>
+          <AppText variant="headlineMedium" style={{ color: colors.primary, fontWeight: '800' }}>
+            {activeJobs.length + pendingJobs.length}
+          </AppText>
+          <AppText variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>Active</AppText>
+        </AppCard>
+        <AppCard elevation={1} style={{ flex: 1, alignItems: 'center', paddingVertical: spacing.md }}>
+          <AppText variant="headlineMedium" style={{ color: colors.primary, fontWeight: '800' }}>
+            {completedCount}
+          </AppText>
+          <AppText variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>Completed</AppText>
+        </AppCard>
+        <AppCard elevation={1} style={{ flex: 1, alignItems: 'center', paddingVertical: spacing.md }}>
+          <AppText variant="headlineMedium" style={{ color: colors.primary, fontWeight: '800' }}>
+            {profile?.avg_rating ? Number(profile.avg_rating).toFixed(1) : '—'}
+          </AppText>
+          <AppText variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>Rating</AppText>
+        </AppCard>
       </View>
 
-        <Text style={{...Typography.subtitle, marginTop: -49, textAlign: "center", marginBottom: Spacing.xs}}>Upcoming Jobs</Text>
-        <FlatList
-        // data={jobs}
-        showsVerticalScrollIndicator={false}
-        data={dummyData}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View
-            style={[
-              styles.jobCard,
-              Typography.note,
-              // { backgroundColor: Colors.dark.white },
-            ]}
-          >
-            <Text style={styles.jobText}>🧾 {item.service_type}</Text>
-            <Text style={Typography.subtitle}>
-              Date: {new Date(item.scheduled_date).toLocaleDateString()}
-            </Text>
-            <Text>Location: {item.location}</Text>
-            <Text>Status: {item.status}</Text>
-            {item.status !== "completed" && (
-              <Button
-                title="Mark Complete"
-                onPress={() => handleComplete(item.id)}
-              />
-            )}
+      {/* Availability toggle */}
+      <AppCard elevation={1} style={{ marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <View style={{
+              width: 10, height: 10, borderRadius: 5,
+              backgroundColor: availability ? '#22C55E' : colors.onSurfaceVariant,
+            }} />
+            <AppText variant="bodyLarge" style={{ color: colors.onSurface, fontWeight: '600' }}>
+              {availability ? 'Available for Jobs' : 'Go Online'}
+            </AppText>
           </View>
+          <Switch
+            value={availability}
+            onValueChange={toggleAvailability}
+            trackColor={{ false: colors.outline, true: colors.primaryContainer }}
+            thumbColor={availability ? colors.primary : colors.onSurfaceVariant}
+          />
+        </View>
+        {profile?.trust_tier ? (
+          <AppText variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: spacing.xs }}>
+            Trust tier: {profile.trust_tier}  ·  Score: {profile.trust_score ?? '—'}
+          </AppText>
+        ) : null}
+      </AppCard>
+
+      {/* Active / pending jobs */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+        <AppText variant="titleSmall" style={{ color: colors.onBackground, fontWeight: '700' }}>
+          Jobs to action
+        </AppText>
+        {jobs.length > 5 && (
+          <AppButton
+            title="See all"
+            variant="text"
+            onPress={() => navigation.navigate('Clean')}
+            style={{ minHeight: 32 }}
+          />
         )}
+      </View>
+
+      <FlatList
+        data={displayJobs}
+        keyExtractor={item => String(item.id)}
+        renderItem={renderJob}
+        scrollEnabled={false}
         ListEmptyComponent={
-          <Text style={[Typography.link, { textAlign: "center" }]}>
-            No jobs assigned yet.
-          </Text>
+          <EmptyState
+            icon="work-outline"
+            title="No active jobs"
+            subtitle={availability ? 'New jobs will appear here when customers book.' : 'Go online to start receiving jobs.'}
+          />
         }
       />
-    </SafeAreaView>
+    </ScreenWrapper>
   );
 }
-
-const styles = StyleSheet.create({
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: Spacing.xs,
-    paddingBottom: Spacing.xxs,
-    borderBottomWidth: 0.5,
-    borderColor: Colors.dark.border,
-  },
-  label: { fontSize: 16 },
-  subHeader: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginVertical: 16,
-  },
-  jobCard: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 12,
-    borderRadius: Spacing.md,
-    marginBottom: 12,
-    backgroundColor: Colors.dark.accent,
-  },
-  jobText: { fontWeight: "bold", marginBottom: 4 },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    // gap: 16,
-    paddingTop: Spacing.xxs,
-  },
-  box: {
-    width: "47%",
-    aspectRatio: 1,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-    backgroundColor: Colors.dark.accent,
-    marginBottom: Spacing.sm,
-  },
-  boxTitle: {
-    marginTop: 10,
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  boxBody: {
-    fontSize: 12,
-    color: "#f2f2f2",
-    textAlign: "center",
-    marginTop: 4,
-  },
-});
-
-// navigation.navigate("ChatScreen", {
-//   jobId: job.id,
-//   receiverId: job.user_id,
-//   role: "janitor",
-// });
-
-//real time job update
-
-// useEffect(() => {
-//   const channel = supabase
-//     .channel(`janitor-jobs-${user.id}`)
-//     .on("postgres_changes", { event: "*", schema: "public", table: "jobs", filter: `janitor_id=eq.${user.id}` },
-//       (payload) => loadJobs()
-//     )
-//     .subscribe();
-//   return () => supabase.removeChannel(channel);
-// }, []);

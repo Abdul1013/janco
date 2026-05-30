@@ -1,101 +1,103 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  ActivityIndicator,
-  Button,
-  Alert,
-} from "react-native";
-import { supabase } from "../../lib/supabase";
-import { useAuth } from "../../hooks/authContext";
-import { useNavigation } from "@react-navigation/native";
-import { Typography } from "../../components/theme/Theme";
-import Header from "../../components/Header";
-import { SafeAreaView } from "react-native-safe-area-context";
+/**
+ * JanitorStatusScreen — Sprint 3 rebuild.
+ *
+ * Shows application status after janitor registration.
+ * Uses janitorApi to check approval status — zero direct Supabase calls.
+ * All styles from useTheme().
+ *
+ * @module screens/Janitor/JanitorStatusScreen
+ */
+
+import React, { useState } from 'react';
+import { View, Image, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { useTheme } from '../../constants/theme/ThemeContext';
+import { useAuth } from '../../hooks/authContext';
+import * as janitorApi from '../../api/janitorApi';
+import ScreenWrapper from '../../components/ui/ScreenWrapper';
+import AppText from '../../components/ui/AppText';
+import AppButton from '../../components/ui/AppButton';
 
 export default function JanitorStatusScreen() {
   const { user } = useAuth();
   const navigation = useNavigation();
+  const { colors, spacing } = useTheme();
   const [checking, setChecking] = useState(false);
-  const [status, setStatus] = useState("pending");
 
   const checkApprovalStatus = async () => {
     setChecking(true);
     try {
-      const { data, error } = await supabase
-        .from("janitors")
-        .select("status")
-        .eq("janitor_id", user.id)
-        .single();
+      const { data, error } = await janitorApi.getJanitorProfile(user?.id);
 
-      if (error) throw error;
-
-      setStatus(data.status);
-
-      if (data.status === "approved") {
-        Alert.alert(
-          "You’re now a Janitor!",
-          "Redirecting to your dashboard..."
-        );
-        navigation.replace("JanitorDashboard");
-      } else{
-        Alert.alert('Review still in Progress')
+      if (error) {
+        Alert.alert('Error', 'Could not check status.');
+        setChecking(false);
+        return;
       }
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Could not check status.");
+
+      if (data?.status === 'approved') {
+        Alert.alert("You're now a Janitor!", 'Redirecting to your dashboard...');
+        navigation.replace('JanitorDashboard');
+      } else {
+        Alert.alert('Review still in progress', 'Please check back later.');
+      }
+    } catch {
+      Alert.alert('Error', 'Could not check status.');
     } finally {
       setChecking(false);
     }
   };
 
   return (
-    <SafeAreaView style={Typography.container}>
-      <Header title="Application Status" />
-      <View style={{ flex:1 ,alignItems: "center", justifyContent: "center" }}>
-        <Text style={Typography.subtitle}>Application Received!</Text>
+    <ScreenWrapper>
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: spacing.md,
+        }}
+      >
+        <AppText variant="headlineSmall" style={{ color: colors.onBackground, marginBottom: spacing.md }}>
+          Application Received!
+        </AppText>
+
         <Image
-          source={require("../../../assets/approval.png")} // optional image
-          style={styles.image}
+          source={require('../../../assets/approval.png')}
+          style={{
+            width: 180,
+            height: 180,
+            marginVertical: spacing.lg,
+            borderRadius: 90,
+          }}
           resizeMode="contain"
         />
 
-        
-        <Text style={Typography.note}>
-          🕐 Your request to become a janitor is being reviewed.
-          You will be notified once approved.
-        </Text>
+        <AppText
+          variant="bodyMedium"
+          style={{
+            color: colors.onSurfaceVariant,
+            textAlign: 'center',
+            marginBottom: spacing.lg,
+            paddingHorizontal: spacing.md,
+          }}
+        >
+          Your request to become a janitor is being reviewed. You will be notified once approved.
+        </AppText>
 
-        {checking ? (
-          <ActivityIndicator style={{ marginTop: 20 }} />
-        ) : (
-          <Button
-            title="Check Now"
-            onPress={checkApprovalStatus}
-            color="#007bff"
-          />
-        )}
-        <Button
+        <AppButton
+          title="Check Now"
+          onPress={checkApprovalStatus}
+          loading={checking}
+          style={{ marginBottom: spacing.sm, width: '100%' }}
+        />
+        <AppButton
           title="Back to Home"
-          onPress={() => navigation.navigate("MainTabs")}
-          color="#777"
-          style={{ marginTop: 10 }}
+          variant="outlined"
+          onPress={() => navigation.navigate('MainTabs')}
+          style={{ width: '100%' }}
         />
       </View>
-    </SafeAreaView>
+    </ScreenWrapper>
   );
 }
-
-const styles = StyleSheet.create({
-  image: {
-    width: 180,
-    height: 180,
-    marginVertical: 30,
-    borderRadius: 100,
-  },
-
-
-  
-});
