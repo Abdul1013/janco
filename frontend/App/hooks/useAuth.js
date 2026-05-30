@@ -1,96 +1,57 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+/**
+ * useAuth Hook (migrated).
+ *
+ * Thin wrapper around authStore (Zustand) that preserves the same
+ * return shape used by every screen so nothing else needs to change yet.
+ *
+ * Legacy behaviour:
+ *   - Restores session on mount via authStore.initialize()
+ *   - Exposes { user, profile, loading, logout, getUserProfile }
+ *
+ * All direct supabase.auth.* / supabase.from('profiles') calls have
+ * been removed — everything goes through the API client now.
+ *
+ * @module hooks/useAuth
+ */
+
+import { useEffect } from 'react';
+import useAuthStore from '../store/authStore';
 
 export function useAuth() {
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    user,
+    profile,
+    loading,
+    initialized,
+    initialize,
+    logout,
+    updateProfile,
+  } = useAuthStore();
 
-  //user profile
-  const getUserProfile = async (userId) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-
-    if (error) {
-      console.log("profile fetch error: ", error);
-      return null;
-    }
-    setProfile(data);
-    return data;
-  };
-  // useEffect(() => {
-  //     const getSession = async() => {
-  //         const {data: sessionData, error} = await supabase.auth.getSession()
-  //         if(sessionData?.session?.user){
-
-  //             setUser(sessionData.session?.user)
-  //         }else{
-  //             setUser(null)
-  //         }
-  //         setLoading(false)
-  //     }
-  //     getSession();
-
-  //     const {data: listener} = supabase.auth.onAuthStateChange((_event, session) =>{
-  //         setUser(session?.user ?? null)
-  //     })
-
-  //     return ()=>{
-  //         listener.subscription.unsubscribe()
-  //     }
-
-  // }, []);
-
+  // Restore session once on first mount
   useEffect(() => {
-    //persist session to avoid re login 
-    const getSession = async () => {
-      try {
-        const { data: sessionData, error } = await supabase.auth.getSession();
-        const currentUser = sessionData?.session?.user;
+    if (!initialized) {
+      initialize();
+    }
+  }, [initialized, initialize]);
 
-        setUser(currentUser);
-        if (currentUser) {
-          const userProfile = await getUserProfile(currentUser.id);
-          setProfile(userProfile);
-        }
-      } catch (error) {
-        console.error("Session fetch error:", error);
-        setUser(null);
-        setProfile(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getSession();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-
-        if (currentUser) {
-          const userProfile = await getUserProfile(currentUser.id);
-          setProfile(userProfile);
-        } else {
-          setProfile(null);
-        }
-      }
-    );
-
-    return () => {
-      listener?.subscription?.unsubscribe?.(); // fallback safe unsubscribe
-    };
-  }, []);
-
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
+  /**
+   * Backward-compatible helper.
+   * Screens like RegistrationScreen call getUserProfile(userId).
+   * Now we just return the profile already in the store (it's fetched
+   * during initialize / login / signup).  If a fresh fetch is needed
+   * the screen should call authStore.initialize() again.
+   */
+  const getUserProfile = async (_userId) => {
+    return profile;
   };
 
-  return { user, loading, profile, getUserProfile, logout };
+  return {
+    user,
+    profile,
+    loading: loading || !initialized,
+    logout,
+    getUserProfile,
+    updateProfile,
+  };
 }
