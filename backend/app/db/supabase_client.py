@@ -1,15 +1,5 @@
-import os
-from supabase import create_client, Client
-from dotenv import load_dotenv
-
-load_dotenv()
-supabase: Client = create_client(
-    os.getenv("SUPABASE_URL"),
-    os.getenv("SUPABASE_KEY")
+raise ImportError(
+    "supabase_client has been removed. "
+    "Import get_pool from app.db.pool instead:\n"
+    "    from app.db.pool import get_pool"
 )
-
-# core/config.py
-
-# SUPABASE_URL  = os.getenv("SUPABASE_URL")
-# SUPABASE_KEY  = os.getenv("SUPABASE_KEY")
-# supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
