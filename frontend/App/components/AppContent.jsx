@@ -1,32 +1,19 @@
 // AppContent.js
-import React, { useEffect } from "react";
-import { useAuth } from "../hooks/authContext";
+import { useEffect } from "react";
+import useAuthStore from "../store/authStore";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { ActivityIndicator, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
-import * as Linking from "expo-linking";
 
-import RootNavigator from "../navigation/RootNavigator";
-import AuthNavigator from "../navigation/AuthNavigator";
+import RootNavigator, { linking } from "../navigation/RootNavigator";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 
 SplashScreen.preventAutoHideAsync();
 
-const linking = {
-  prefixes: ["janco://"],
-  config: {
-    screens: {
-      AuthCallback: "auth/callback",
-      Home: "home",
-      UpdatePassword: "reset-password",
-    },
-  },
-};
-
 export default function AppContent() {
-  const { user, loading } = useAuth();
+  const initialized = useAuthStore((s) => s.initialized);
   const [fontsLoaded] = useFonts({
     Chewy: require("../../assets/fonts/Chewy-Regular.ttf"),
     Quicksand: require("../../assets/fonts/Quicksand-Regular.ttf"),
@@ -36,14 +23,14 @@ export default function AppContent() {
 
   useEffect(() => {
     const hide = async () => {
-      if (fontsLoaded && !loading) {
+      if (fontsLoaded && initialized) {
         await SplashScreen.hideAsync();
       }
     };
     hide();
-  }, [fontsLoaded, loading]);
+  }, [fontsLoaded, initialized]);
 
-  if (!fontsLoaded || loading) {
+  if (!fontsLoaded || !initialized) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" />
@@ -52,10 +39,10 @@ export default function AppContent() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <SafeAreaView style={{ flex: 1 }}>
-        <StatusBar hidden/>
-        {user ? <RootNavigator /> : <AuthNavigator />}
+   
+        <RootNavigator />
       </SafeAreaView>
     </NavigationContainer>
   );
