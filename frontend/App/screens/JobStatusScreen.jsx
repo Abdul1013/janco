@@ -1,245 +1,203 @@
-import React, { useEffect, useState, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Header from "../components/Header";
-import { Typography, Colors } from "../components/theme/Theme";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { useAuth } from "../hooks/authContext";
+import React, { useEffect, useState, useRef } from 'react';
+import { Alert, Image, View } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '../constants/theme/ThemeContext';
+import * as bookingApi from '../api/bookingApi';
+import * as janitorApi from '../api/janitorApi';
+import ScreenWrapper from '../components/ui/ScreenWrapper';
+import AppCard from '../components/ui/AppCard';
+import AppText from '../components/ui/AppText';
+import AppButton from '../components/ui/AppButton';
+import Skeleton from '../components/ui/Skeleton';
+import StatusTimeline from '../components/job/StatusTimeline';
 
-const API_BASE = process.env.API_URL || "https://api.yourdomain.com";
-
-function haversineKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const toRad = (v) => (v * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+function formatService(type) {
+  return (type || 'Service').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-export default function JobStatus() {
+export default function JobStatusScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { profile } = useAuth();
-  const initialJob = route.params?.job || null;
+  const { colors, spacing } = useTheme();
 
+  const initialJob = route.params?.job || null;
   const [job, setJob] = useState(initialJob);
-  const [loading, setLoading] = useState(false);
-  const pollingRef = useRef(null);
+  const [janitorProfile, setJanitorProfile] = useState(null);
+  const pollRef = useRef(null);
+
+  // Fetch job from API (also used for polling)
+  const fetchJob = async (id) => {
+    const { data, error } = await bookingApi.getBooking(id);
+    if (!error && data) setJob(data?.job || data);
+  };
+
+  // Fetch assigned janitor profile for display
+  const fetchJanitor = async (janitorId) => {
+    const { data } = await janitorApi.getJanitorProfile(janitorId);
+    if (data) setJanitorProfile(data);
+  };
 
   useEffect(() => {
-    // start polling
-    startPolling();
-    return () => stopPolling();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function startPolling() {
-    fetchJob();
-    pollingRef.current = setInterval(fetchJob, 15000);
-  }
-  function stopPolling() {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-  }
-
-  async function fetchJob() {
     if (!job?.id) return;
-    try {
-      const res = await fetch(`${API_BASE}/jobs/${job.id}`, {
-        headers: {
-          "Content-Type": "application/json",
-          ...(profile?.accessToken
-            ? { Authorization: `Bearer ${profile.accessToken}` }
-            : {}),
-        },
-      });
-      if (!res.ok) {
-        console.warn("Could not fetch job");
-        return;
-      }
-      const json = await res.json();
-      setJob(json.job || json);
-    } catch (err) {
-      console.warn("fetchJob error", err);
-    }
-  }
+    fetchJob(job.id);
+    pollRef.current = setInterval(() => fetchJob(job.id), 15_000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [job?.id]);
 
-  function computeETAMinutes() {
-    if (!job?.janitor || !job.location || !job.janitor.lat || !job.janitor.lng)
-      return null;
-    const distKm = haversineKm(
-      job.location.lat,
-      job.location.lng,
-      job.janitor.lat,
-      job.janitor.lng
-    );
-    const avgSpeedKmph = 30; // assumption
-    return Math.max(2, Math.round((distKm / avgSpeedKmph) * 60)); // at least 2 minutes
-  }
+  useEffect(() => {
+    const janitorId = job?.janitor_id;
+    if (janitorId) fetchJanitor(String(janitorId));
+    else setJanitorProfile(null);
+  }, [job?.janitor_id]);
 
-  async function cancelJob() {
-    if (!job?.id) return;
-    Alert.alert("Cancel Job", "Are you sure you want to cancel this job?", [
-      { text: "No", style: "cancel" },
+  const handleCancel = () => {
+    Alert.alert('Cancel Job', 'Are you sure you want to cancel this booking?', [
+      { text: 'No', style: 'cancel' },
       {
-        text: "Yes, cancel",
+        text: 'Yes, cancel',
+        style: 'destructive',
         onPress: async () => {
-          setLoading(true);
-          try {
-            const res = await fetch(`${API_BASE}/cancel-job`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                ...(profile?.accessToken
-                  ? { Authorization: `Bearer ${profile.accessToken}` }
-                  : {}),
-              },
-              body: JSON.stringify({ job_id: job.id }),
-            });
-            if (!res.ok) throw new Error(await res.text());
-            const json = await res.json();
-            setJob(json.job || { ...job, status: "cancelled" });
-            Alert.alert("Cancelled", "Job cancelled successfully");
-            stopPolling();
-            navigation.navigate("Home");
-          } catch (err) {
-            console.warn("cancel error", err);
-            Alert.alert("Failed", err.message || "Could not cancel");
-          } finally {
-            setLoading(false);
+          const { data, error } = await bookingApi.cancelBooking(job.id);
+          if (error) {
+            Alert.alert('Failed', error);
+          } else {
+            setJob(data?.job || { ...job, status: 'cancelled' });
+            if (pollRef.current) clearInterval(pollRef.current);
+            Alert.alert('Cancelled', 'Your booking has been cancelled.');
           }
         },
       },
     ]);
-  }
+  };
+
+  const canCancel = ['pending', 'confirmed'].includes(job?.status);
+  const canChat = !!job?.janitor_id;
+  const canRate = job?.status === 'completed' && !!job?.janitor_id;
+
+  const janitorName = janitorProfile?.full_name || 'your janitor';
 
   if (!job) {
     return (
-      <SafeAreaView style={styles.wrap}>
-        <Header title="Job" />
-        <View style={{ padding: 20 }}>
-          <ActivityIndicator />
-          <Text style={{ marginTop: 12 }}>Loading job...</Text>
-        </View>
-      </SafeAreaView>
+      <ScreenWrapper title="Job Status" showBack>
+        <Skeleton variant="card" />
+        <Skeleton variant="list" style={{ marginTop: spacing.md }} />
+      </ScreenWrapper>
     );
   }
 
-  const eta = computeETAMinutes();
-  const janitor = job.janitor || job.assigned_janitor || {};
-
   return (
-    <SafeAreaView style={styles.wrap}>
-      <Header title="Job Status" />
-      <View style={{ padding: 16 }}>
-        <Text style={Typography.header}>Status: {job.status || "unknown"}</Text>
-
-        <View style={styles.card}>
-          <Text style={styles.label}>Janitor</Text>
-          <Text style={styles.name}>{janitor.name || "—"}</Text>
-          <Text style={styles.sub}>
-            {janitor.bio || janitor.about || "Professional cleaner"}
-          </Text>
-
-          <View
-            style={{
-              flexDirection: "row",
-              marginTop: 8,
-              justifyContent: "space-between",
-            }}
-          >
-            <Text style={styles.muted}>Rating: {janitor.rating ?? "—"}</Text>
-            <Text style={styles.muted}>ETA: {eta ? `${eta} min` : "—"}</Text>
-          </View>
-
-          <View style={{ marginTop: 12 }}>
-            <Text style={styles.label}>
-              Scheduled: {job.scheduled_time || job.scheduled_date || "—"}
-            </Text>
-            <Text style={styles.label}>
-              Address: {job.location?.address_line || job.location?.city || "—"}
-            </Text>
-            <Text style={[styles.label, { marginTop: 6 }]}>
-              Notes: {job.metadata?.notes || job.notes || "—"}
-            </Text>
-          </View>
-        </View>
-
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={() =>
-              navigation.navigate("Chat", {
-                janitorId: janitor.id,
-                jobId: job.id,
-                role: "user",
-              })
-            }
-          >
-            <Text style={styles.actionText}>Chat</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: "#ff6b6b" }]}
-            onPress={cancelJob}
-            disabled={loading}
-          >
-            <Text style={styles.actionText}>
-              {loading ? "Cancelling..." : "Cancel Job"}
-            </Text>
-          </TouchableOpacity>
+    <ScreenWrapper title="Job Status" showBack>
+      {/* Service summary chip */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
+        <AppText variant="titleMedium" style={{ color: colors.onBackground, fontWeight: '600' }}>
+          {formatService(job.service_type)}
+        </AppText>
+        <View style={{
+          paddingHorizontal: spacing.sm, paddingVertical: 4,
+          borderRadius: 8, backgroundColor: colors.primaryContainer,
+        }}>
+          <AppText variant="bodySmall" style={{ color: colors.onPrimaryContainer, fontWeight: '700' }}>
+            #{String(job.id || '').slice(-6).toUpperCase()}
+          </AppText>
         </View>
       </View>
-    </SafeAreaView>
+
+      {/* Status timeline */}
+      <AppCard elevation={1} style={{ marginBottom: spacing.md }}>
+        <StatusTimeline currentStatus={job.status} timestamps={job.status_timestamps || {}} />
+      </AppCard>
+
+      {/* Assigned janitor */}
+      <AppCard elevation={1} style={{ marginBottom: spacing.md }}>
+        <AppText variant="titleSmall" style={{ color: colors.onSurfaceVariant, marginBottom: spacing.sm }}>
+          Assigned Janitor
+        </AppText>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {janitorProfile?.avatar_url ? (
+            <Image
+              source={{ uri: janitorProfile.avatar_url }}
+              style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.surfaceVariant }}
+            />
+          ) : (
+            <View style={{
+              width: 52, height: 52, borderRadius: 26,
+              backgroundColor: colors.primaryContainer,
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <MaterialIcons name="person" size={26} color={colors.onPrimaryContainer} />
+            </View>
+          )}
+          <View style={{ marginLeft: spacing.md, flex: 1 }}>
+            <AppText variant="bodyLarge" style={{ color: colors.onSurface, fontWeight: '600' }}>
+              {janitorProfile?.full_name || (job.janitor_id ? 'Loading...' : 'Pending assignment')}
+            </AppText>
+            {janitorProfile?.avg_rating ? (
+              <AppText variant="bodySmall" style={{ color: '#F59E0B' }}>
+                {Number(janitorProfile.avg_rating).toFixed(1)}★  ·  {janitorProfile.trust_tier || ''}
+              </AppText>
+            ) : null}
+          </View>
+        </View>
+      </AppCard>
+
+      {/* Booking details */}
+      <AppCard elevation={1} style={{ marginBottom: spacing.md }}>
+        {job.scheduled_date ? <Row label="Date" value={new Date(job.scheduled_date).toDateString()} /> : null}
+        {job.scheduled_time ? <Row label="Time" value={job.scheduled_time} /> : null}
+        {job.address ? <Row label="Address" value={job.address} /> : null}
+        {job.price ? <Row label="Price" value={`₦${Number(job.price).toLocaleString('en-NG')}`} /> : null}
+        {job.notes ? <Row label="Notes" value={job.notes} /> : null}
+      </AppCard>
+
+      {/* Action buttons */}
+      {(canChat || canCancel || canRate) && (
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          {canChat && (
+            <AppButton
+              title="Chat"
+              variant="outlined"
+              onPress={() => navigation.navigate('Chat', {
+                jobId: job.id,
+                janitorId: String(job.janitor_id),
+                janitorName,
+              })}
+              style={{ flex: 1 }}
+            />
+          )}
+          {canCancel && (
+            <AppButton
+              title="Cancel"
+              variant="outlined"
+              onPress={handleCancel}
+              style={{ flex: 1, borderColor: colors.error }}
+            />
+          )}
+          {canRate && (
+            <AppButton
+              title="Rate Janitor"
+              onPress={() => navigation.navigate('Rating', {
+                jobId: job.id,
+                janitorName,
+                serviceType: job.service_type || '',
+              })}
+              style={{ flex: 1 }}
+            />
+          )}
+        </View>
+      )}
+    </ScreenWrapper>
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: "#fff" },
-  card: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 10,
-    elevation: 2,
-    marginTop: 12,
-  },
-  label: { fontSize: 14, color: "#444", marginBottom: 6 },
-  name: { fontSize: 18, fontWeight: "700" },
-  sub: { color: "#666", marginTop: 6 },
-  muted: { color: "#777" },
-  actionBtn: {
-    backgroundColor: Colors.primary || "#00A86B",
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 8,
-    marginTop: 14,
-  },
-  actionText: { color: "#fff", fontWeight: "700" },
-});
-
-// API expectations & tips
-
-//  backend should expose these endpoints (or adapt names/shape in code):
-
-// GET /nearby-janitors?service=...&user_lat=...&user_lng=... → { count, janitors: [{id, name, lat, lng, bio, avatar, rating, distance_km}] }
-
-// POST /book-job → accepts booking payload and returns { job } (job should include id, status, and janitor object with lat/lng)
-
-// GET /jobs/:id → returns latest job object (used by JobStatus polling)
-
-// POST /cancel-job → accepts { job_id }, cancels and returns u
-
-// use real-time updates instead of polling, we can add a WebSocket or Supabase Realtime subscription
+function Row({ label, value }) {
+  const { colors, spacing } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.xs }}>
+      <AppText variant="bodyMedium" style={{ color: colors.onSurfaceVariant }}>{label}</AppText>
+      <AppText variant="bodyMedium" style={{ color: colors.onSurface, fontWeight: '500', maxWidth: '60%', textAlign: 'right' }}>
+        {value}
+      </AppText>
+    </View>
+  );
+}

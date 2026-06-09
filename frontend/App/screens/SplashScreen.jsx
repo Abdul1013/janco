@@ -1,25 +1,28 @@
-import React, { useEffect } from "react";
-import { View, ActivityIndicator } from "react-native";
-import { useAuth } from "../hooks/authContext";
-import { useNavigation } from "@react-navigation/native";
+/**
+ * SplashScreen — Sprint 3 rebuild.
+ *
+ * Theme-aware loading screen. Shown while authStore is initializing.
+ * No navigation needed — RootNavigator handles stack switching.
+ *
+ * @module screens/SplashScreen
+ */
+
+import React from 'react';
+import { ActivityIndicator, Image, View } from 'react-native';
+import { useTheme } from '../constants/theme/ThemeContext';
+import AppText from '../components/ui/AppText';
 
 export default function SplashScreen() {
-  const { user, loading } = useAuth();
-  const navigation = useNavigation();
-
-  useEffect(() => {
-    if (!loading) {
-      if (user) {
-        navigation.replace('MainTabs');
-      } else {
-        navigation.replace('Login');
-      }
-    }
-  }, [loading, user]);
+  const { colors, spacing } = useTheme();
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <ActivityIndicator size="large" />
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+      <Image
+        resizeMode="contain"
+        style={{ height: 100, width: 100, marginBottom: spacing.lg }}
+        source={require('../../assets/logo.png')}
+      />
+      <ActivityIndicator size="large" color={colors.primary} />
     </View>
-  )
+  );
 }
