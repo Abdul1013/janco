@@ -70,7 +70,7 @@ export default function ScreenWrapper({
 
   return (
     <SafeAreaView style={containerStyle} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle={isDark ? 'dark-content' : 'light-content'} backgroundColor={colors.surface} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
       {showHeader && (
         <AppHeader title={title} showBack={showBack} onBack={onBack} rightElement={headerRight} />
       )}
