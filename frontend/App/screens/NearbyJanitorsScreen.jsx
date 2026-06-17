@@ -1,259 +1,201 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  ActivityIndicator,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  Image,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { useAuth } from "../hooks/authContext";
-import Header from "../components/Header";
-import Button from "../components/ui/Button";
-import { Typography, Colors } from "../components/theme/Theme";
+/**
+ * NearbyJanitorsScreen — Sprint 3 rebuild.
+ *
+ * Calls janitorApi.getNearbyJanitors(lat, lng, serviceType).
+ * FlatList with janitor cards: name, trust badge, rating, distance.
+ * Skeleton loading state + EmptyState if none available.
+ * Select janitor → create booking via bookingApi → navigate to JobStatus.
+ *
+ * @module screens/NearbyJanitorsScreen
+ */
 
-const API_BASE = process.env.API_URL || "https://api.yourdomain.com"; // set your API base in env
+import React, { useEffect, useState } from 'react';
+import { Alert, FlatList, Image, View } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '../constants/theme/ThemeContext';
+import * as janitorApi from '../api/janitorApi';
+import * as bookingApi from '../api/bookingApi';
+import ScreenWrapper from '../components/ui/ScreenWrapper';
+import AppCard from '../components/ui/AppCard';
+import AppText from '../components/ui/AppText';
+import AppButton from '../components/ui/AppButton';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
 
 export default function NearbyJanitors() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { profile, user } = useAuth();
+  const { colors, spacing } = useTheme();
 
-  // booking data passed from PriceEstimateScreen
   const {
-    category,
-    rooms,
-    toilets,
-    clothesCount,
-    extras,
-    date,
-    time,
-    notes,
-    address,
-    userLocation,
-    priceEstimate,
-    breakdown,
+    category, rooms, toilets, clothesCount, extras,
+    date, time, notes, address, userLocation,
+    priceEstimate, breakdown, scanResult, useScan, areaM2,
   } = route.params || {};
+
+  const TRANSPORT_THRESHOLD_KM = 5;
+  const TRANSPORT_BAND_KM = 5;
+  const TRANSPORT_BAND_FEE = 1000;
+
+  function calcTransportFee(distanceKm) {
+    if (!distanceKm || distanceKm <= TRANSPORT_THRESHOLD_KM) return 0;
+    const bands = Math.floor((distanceKm - TRANSPORT_THRESHOLD_KM) / TRANSPORT_BAND_KM) + 1;
+    return bands * TRANSPORT_BAND_FEE;
+  }
 
   const [loading, setLoading] = useState(true);
   const [janitors, setJanitors] = useState([]);
-  const [fetchError, setFetchError] = useState(null);
-  const [bookingInProgress, setBookingInProgress] = useState(false);
+  const [error, setError] = useState(null);
+  const [bookingId, setBookingId] = useState(null);
 
-  useEffect(() => {
-    loadNearbyJanitors();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function loadNearbyJanitors() {
+  const loadJanitors = async () => {
     setLoading(true);
-    setFetchError(null);
-    try {
-      const params = new URLSearchParams({
-        service: category,
-        user_lat: String(userLocation?.lat || 0),
-        user_lng: String(userLocation?.lng || 0),
-        max_km: "10",
-      });
-
-      const res = await fetch(`${API_BASE}/nearby-janitors?${params.toString()}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          // include auth if available
-          ...(profile?.accessToken ? { Authorization: `Bearer ${profile.accessToken}` } : {}),
-        },
-      });
-
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Failed to fetch janitors");
-      }
-
-      const json = await res.json();
-      setJanitors(json.janitors || []);
-    } catch (err) {
-      console.warn("Nearby janitors fetch error", err);
-      setFetchError(err.message || "Failed to fetch nearby janitors");
-    } finally {
-      setLoading(false);
+    setError(null);
+    const { data, error: apiErr } = await janitorApi.getNearbyJanitors(
+      userLocation?.lat || 0, userLocation?.lng || 0, category,
+    );
+    if (apiErr) {
+      setError(apiErr);
+    } else {
+      setJanitors(data?.janitors || data || []);
     }
-  }
+    setLoading(false);
+  };
 
-  function renderEmpty() {
-    if (loading) return null;
-    return (
-      <View style={styles.empty}>
-        <Text style={Typography.note}>No available janitors found in your area.</Text>
-        <Button title="Retry" onPress={loadNearbyJanitors} />
-      </View>
-    );
-  }
+  useEffect(() => { loadJanitors(); }, []);
 
-  function onChooseJanitor(janitor) {
+  const handleSelect = (janitor) => {
+    const dist = janitor.distance_km != null ? Number(janitor.distance_km) : null;
+    const fee = calcTransportFee(dist);
+    const baseEstimate = priceEstimate || 0;
+    const totalWithTransport = baseEstimate + fee;
+
+    let msg = `Select ${janitor.full_name || 'this janitor'}`;
+    if (dist != null) msg += ` (${dist.toFixed(1)} km away)`;
+    msg += '?';
+    if (fee > 0) {
+      msg += `\n\nA transport fee of ₦${fee.toLocaleString()} applies. Estimated total: ₦${totalWithTransport.toLocaleString()}.`;
+    } else if (baseEstimate > 0) {
+      msg += `\n\nEstimated total: ₦${baseEstimate.toLocaleString()} (no transport fee).`;
+    }
+
     Alert.alert(
-      "Confirm selection",
-      `You selected ${janitor.name} (${janitor.distance_km ?? "n/a"} km away). Proceed to book?`,
+      'Confirm Selection',
+      msg,
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Confirm", onPress: () => handleBookWithJanitor(janitor) },
-      ]
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Confirm', onPress: () => createBooking(janitor) },
+      ],
     );
-  }
+  };
 
-  async function handleBookWithJanitor(janitor) {
-    // Build booking payload expected by /book-job
+  const createBooking = async (janitor) => {
     const payload = {
-      user_id: profile?.id || user?.id || null,
-      janitor_id: janitor.id,
       service_type: category,
-      scheduled_time: `${date} ${time}`,
-      location: {
-        city: address?.city || address || "Unknown",
-        lat: userLocation?.lat || 0,
-        lng: userLocation?.lng || 0,
-        address_line: address || "",
-      },
-      // include client-side breakdown/notes for admin
-      metadata: {
-        priceEstimate,
-        breakdown,
-        notes,
-        rooms,
-        toilets,
-        clothesCount,
-        extras,
-      },
+      rooms: rooms || 0,
+      toilets: toilets || 0,
+      clothes_count: clothesCount || 0,
+      extras: extras || {},
+      scheduled_date: date,
+      scheduled_time: time,
+      address: address || '',
+      latitude: userLocation?.lat || 0,
+      longitude: userLocation?.lng || 0,
+      janitor_id: janitor.janitor_id ?? janitor.id,
+      notes: notes || '',
+      distance_km: janitor.distance_km ?? null,
+      use_scan: useScan || false,
+      area_m2: areaM2 ?? null,
     };
 
-    setBookingInProgress(true);
-    try {
-      const res = await fetch(`${API_BASE}/book-job`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(profile?.accessToken ? { Authorization: `Bearer ${profile.accessToken}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || "Booking failed");
-      }
-
-      const json = await res.json();
-
-      // navigate to JobStatus or JobDetails with returned job
-      Alert.alert("Success", "Job successfully created", [
-        {
-          text: "OK",
-          onPress: () => navigation.navigate("JobStatus", { job: json.job || json }),
-        },
-      ]);
-    } catch (err) {
-      console.warn("Booking error", err);
-      Alert.alert("Booking failed", err.message || "Please try again");
-    } finally {
-      setBookingInProgress(false);
+    const { data, error: apiErr } = await bookingApi.createBooking(payload);
+    if (apiErr) {
+      Alert.alert('Booking Failed', apiErr);
+      return;
     }
-  }
 
-  function renderItem({ item }) {
-    return (
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <Image
-            source={{ uri: item.avatar || "https://placehold.co/80x80" }}
-            style={styles.avatar}
-          />
-          <View style={{ flex: 1, paddingLeft: 12 }}>
-            <Text style={styles.name}>{item.name || "Unnamed Janitor"}</Text>
-            <Text style={styles.sub}>{item.bio || item.about || "Available janitor"}</Text>
-            <View style={styles.metaRow}>
-              <Text style={styles.muted}>{item.distance_km ?? "—"} km</Text>
-              {item.rating ? <Text style={styles.muted}> • {item.rating}★</Text> : null}
-            </View>
+    const job = data?.job || data;
+    Alert.alert('Success', 'Booking created!', [
+      { text: 'OK', onPress: () => navigation.navigate('JobStatus', { job }) },
+    ]);
+  };
+
+  const renderJanitor = ({ item }) => (
+    <AppCard elevation={1} style={{ marginBottom: spacing.sm }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Image
+          source={{ uri: item.avatar_url || undefined }}
+          style={{ width: 64, height: 64, borderRadius: 10, backgroundColor: colors.surfaceVariant }}
+        />
+        <View style={{ flex: 1, marginLeft: spacing.md }}>
+          <AppText variant="bodyLarge" style={{ color: colors.onSurface, fontWeight: '700' }}>
+            {item.full_name || 'Unnamed Janitor'}
+          </AppText>
+          <AppText variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginTop: 2 }}>
+            {item.bio || 'Available janitor'}
+          </AppText>
+          <View style={{ flexDirection: 'row', marginTop: spacing.xs, gap: spacing.md }}>
+            <AppText variant="bodySmall" style={{ color: colors.onSurfaceVariant }}>
+              {item.distance_km != null ? `${Number(item.distance_km).toFixed(1)} km` : '—'}
+            </AppText>
+            {item.avg_rating ? (
+              <AppText variant="bodySmall" style={{ color: colors.warning ?? '#F59E0B' }}>
+                {Number(item.avg_rating).toFixed(1)}★
+              </AppText>
+            ) : null}
+            {item.trust_tier ? (
+              <View style={{ backgroundColor: colors.primaryContainer, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 1 }}>
+                <AppText variant="bodySmall" style={{ color: colors.onPrimaryContainer, fontWeight: '600' }}>
+                  {item.trust_tier}
+                </AppText>
+              </View>
+            ) : null}
           </View>
         </View>
-
-        <View style={styles.footerRow}>
-          <Text style={styles.priceNote}>Available now</Text>
-          <TouchableOpacity style={styles.selectBtn} onPress={() => onChooseJanitor(item)} disabled={bookingInProgress}>
-            <Text style={styles.selectText}>{bookingInProgress ? "Booking..." : "Select"}</Text>
-          </TouchableOpacity>
-        </View>
+        <AppButton title="Select" onPress={() => handleSelect(item)} style={{ minWidth: 80 }} />
       </View>
-    );
-  }
+    </AppCard>
+  );
 
   return (
-    <SafeAreaView style={styles.wrap}>
-      <Header title="Choose Janitor" />
-      <View style={{ padding: 16 }}>
-        <Text style={Typography.header}>Nearby Janitors</Text>
-        <Text style={Typography.note}>Choose a janitor to assign for this booking</Text>
-      </View>
+    <ScreenWrapper title="Choose a Janitor" showBack scrollable={false}>
+    
+      <AppText variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginBottom: spacing.md, textAlign: 'center' }}>
+        Select someone nearby to handle your booking
+      </AppText>
 
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} size="large" color={Colors.primary} />
-      ) : fetchError ? (
-        <View style={{ padding: 16 }}>
-          <Text style={Typography.note}>Error: {fetchError}</Text>
-          <Button title="Retry" onPress={loadNearbyJanitors} />
+        <View style={{ gap: spacing.sm }}>
+          <Skeleton variant="card" />
+          <Skeleton variant="card" />
+          <Skeleton variant="card" />
         </View>
+      ) : error ? (
+        <EmptyState
+          icon="error-outline"
+          title="Could not load janitors"
+          subtitle={error}
+          actionLabel="Retry"
+          onAction={loadJanitors}
+        />
       ) : (
         <FlatList
           data={janitors}
-          keyExtractor={(i) => i.id}
-          renderItem={renderItem}
-          contentContainerStyle={{ padding: 16 }}
-          ListEmptyComponent={renderEmpty}
+          keyExtractor={(item) => item.janitor_id ?? item.id ?? String(Math.random())}
+          renderItem={renderJanitor}
+          contentContainerStyle={{ paddingBottom: spacing.xxl }}
+          ListEmptyComponent={
+            <EmptyState
+              icon="person-search"
+              title="No janitors found"
+              subtitle="No available janitors in your area right now."
+              actionLabel="Retry"
+              onAction={loadJanitors}
+            />
+          }
         />
       )}
-    </SafeAreaView>
+    </ScreenWrapper>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: "#f8f8f8" },
-  card: {
-    backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 12,
-    elevation: 1,
-  },
-  row: { flexDirection: "row", alignItems: "center" },
-  avatar: { width: 72, height: 72, borderRadius: 10, backgroundColor: "#eee" },
-  name: { fontSize: 16, fontWeight: "700" },
-  sub: { color: "#666", marginTop: 4 },
-  metaRow: { flexDirection: "row", marginTop: 6 },
-  muted: { color: "#888", fontSize: 13 },
-  footerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12 },
-  selectBtn: {
-    backgroundColor: Colors.primary || "#00A86B",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  selectText: { color: "#fff", fontWeight: "700" },
-  priceNote: { color: "#333" },
-  empty: { padding: 24, alignItems: "center" },
-});
-
-// Example: Booking Flow
-// User lands on the screen.
-// App fetches nearby janitors.
-// User taps "Select" on a janitor.
-// Confirmation dialog appears.
-// On confirm, booking request is sent.
-// On success, navigates to job status.
-// Suggestions
-// Error Handling: Consider more user-friendly error messages.
-// Location Defaults: Warn users if location is missing.
-// Accessibility: Add accessibility labels to buttons and images.

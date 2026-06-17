@@ -1,49 +1,87 @@
-import { useEffect } from "react";
-import { View, ActivityIndicator, Text } from "react-native";
-import * as Linking from 'expo-linking  '
-import { useNavigation } from "@react-navigation/native";
-import { supabase } from "../lib/supabase";
-import { Typography } from "../components/theme/Theme";
+/**
+ * AuthCallbackScreen — Sprint 3 rebuild.
+ *
+ * Handles deep-link callback from Supabase (password recovery, email verify).
+ * Restores session via authStore — zero direct Supabase calls.
+ * All styles from useTheme().
+ *
+ * @module screens/AuthCallbackScreen
+ */
+
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
+import * as Linking from 'expo-linking';
+import { useNavigation } from '@react-navigation/native';
+import { useTheme } from '../constants/theme/ThemeContext';
+import useAuthStore from '../store/authStore';
+import AppText from '../components/ui/AppText';
 
 export default function AuthCallbackScreen() {
-    const navigation = useNavigation();
+  const navigation = useNavigation();
+  const { colors, spacing } = useTheme();
+  const initialize = useAuthStore((s) => s.initialize);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        const handleDeepLink = async () => {
-            const url = Linking.useURL();
-            if (url) {
-                const params = new URLSearchParams(url.split('#')[1]);
-
-                const access_token = params.get('access_token');
-                const refresh_token = params.get('refresh_token');
-                const type = params.get('type');
-
-                if (access_token && refresh_token) {
-                    const { error } = await supabase.auth.setSession({
-                        access_token,
-                        refresh_token,
-                    });
-
-                    if (!error) {
-                        if (type === 'recovery') {
-                            navigation.navigate('UpdatePassword');
-                        } else {
-                            navigation.replace('Login')
-                        }
-                    } else {
-                        console.error('session error: ', error.message)
-                    }
-                }
-            }
+  useEffect(() => {
+    const handleDeepLink = async () => {
+      try {
+        const url = await Linking.getInitialURL();
+        if (!url) {
+          setError('No callback URL received.');
+          return;
         }
-        handleDeepLink();
-    }, []);
 
-    return (
-        <View style={Typography.container}>
-            <ActivityIndicator />
-            <Text>Restoring session ...</Text>
+        const fragment = url.split('#')[1];
+        if (!fragment) {
+          setError('Invalid callback URL.');
+          return;
+        }
 
-        </View>
-    )
+        const params = new URLSearchParams(fragment);
+        const type = params.get('type');
+
+        // Re-initialize authStore — it will pick up the new session
+        // from AsyncStorage if the Supabase client has already set it.
+        await initialize();
+
+        if (type === 'recovery') {
+          navigation.replace('UpdatePassword');
+        } else {
+          navigation.replace('Login');
+        }
+      } catch (err) {
+        setError('Failed to restore session.');
+      }
+    };
+
+    handleDeepLink();
+  }, []);
+
+  return (
+    <View
+      style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: colors.background,
+        padding: spacing.md,
+      }}
+    >
+      {error ? (
+        <AppText variant="bodyMedium" style={{ color: colors.error, textAlign: 'center' }}>
+          {error}
+        </AppText>
+      ) : (
+        <>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <AppText
+            variant="bodyMedium"
+            style={{ marginTop: spacing.md, color: colors.onSurfaceVariant }}
+          >
+            Restoring session...
+          </AppText>
+        </>
+      )}
+    </View>
+  );
 }

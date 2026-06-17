@@ -1,189 +1,134 @@
-import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import Icon from "react-native-vector-icons/FontAwesome5";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Colors, Typography, Spacing } from "../components/theme/Theme";
-import { useNavigation } from "@react-navigation/native";
-import { Octicons } from "@expo/vector-icons";
-import { useAuth } from "../hooks/authContext";
+/**
+ * HomeScreen — Sprint 3 rebuild.
+ *
+ * Service category grid from constants/services.js.
+ * Uses AppCard, AppText, theme tokens. Zero hardcoded colors.
+ * Welcome header from authStore.profile.
+ *
+ * @module screens/HomeScreen
+ */
 
-const serviceCategories = [
-  { id: "1", title: "Housekeeping", icon: "broom" },
-  { id: "2", title: "Laundry", icon: "tshirt" },
-  {
-    id: "3",
-    title: "Fumigation",
-    com: "[coming soon]",
-    icon: "bug",
-  },
-  {
-    id: "4",
-    title: "Post-Construction Clean-up ",
-    com: "[coming soon]",
-    icon: "tools",
-  },
-];
+import React from 'react';
+import { View, RefreshControl } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../constants/theme/ThemeContext';
+import { useAuth } from '../hooks/authContext';
+import { SERVICE_TYPES } from '../constants/services';
+import ScreenWrapper from '../components/ui/ScreenWrapper';
+import AppCard from '../components/ui/AppCard';
+import AppText from '../components/ui/AppText';
+import AppButton from '../components/ui/AppButton';
 
+const IconMap = { MaterialIcons, MaterialCommunityIcons };
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
-  const { user, profile, loading } = useAuth();
+  const { colors, spacing } = useTheme();
+  const { profile } = useAuth();
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    // Refresh delay — bookings load via bookingStore on mount
+    setTimeout(() => setRefreshing(false), 800);
+  };
+
+  const renderIcon = (svc) => {
+    const Comp = IconMap[svc.iconFamily] || MaterialIcons;
+    return <Comp name={svc.icon} size={32} color={colors.primary} />;
+  };
 
   return (
-    <SafeAreaView style={Typography.container}>
-      {/* <Image source={require('../assets/images/logo.png')} style={{width:200, height:100}} /> */}
-      <View
-        style={{
-          justifyContent: "space-between",
-          display: "flex",
-          flexDirection: "row",
-        }}
-      >
-        <View>
-          <Text style={Typography.title}>Welcome, {profile?.user_name}</Text>
-        </View>
-        <TouchableOpacity onPress={() => navigation.navigate("Notifications")}>
-          <MaterialIcons name="notifications" size={24} color="white" />
-        </TouchableOpacity>
+    <ScreenWrapper
+      scrollable
+      style={{ paddingTop: spacing.md }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+      }
+    >
+      {/* Header */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+        <AppText variant="headlineSmall" style={{ color: colors.onBackground }}>
+          Welcome, {profile?.user_name || profile?.full_name || 'User'}
+        </AppText>
+        <MaterialIcons
+          name="notifications-none"
+          size={26}
+          color={colors.onSurfaceVariant}
+          onPress={() => {}}
+        />
       </View>
-      <Text
-        style={[
-          Typography.note,
-          { color: Colors.light.textMuted, marginBottom: 15 },
-        ]}
-      >
-        {profile?.address}
-      </Text>
-      <ScrollView contentContainerStyle={{paddingBottom: insets.bottom + 70, 
-        }} contentInsetAdjustmentBehavior="never" showsVerticalScrollIndicator={false}>
-        {/* <Icon name="alert"/> */}
-        <Text
-          style={[
-            Typography.subtitle,
-            { textAlign: "center", marginBottom: Spacing.md },
-          ]}
-        >
-          What Chore?
-        </Text>
-        <View style={styles.gridContainer}>
-          {serviceCategories.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.gridCard}
-              activeOpacity={0.8}
-              onPress={() =>
-                navigation.navigate("ServiceBooking", {
-                  serviceType: item.title,
-                })
-              }
-            >
-              <Icon name={item.icon} size={24} color="#2D2D2D" />
-              <Text style={styles.cardText}>{item.title}</Text>
-              {item.com && <Text style={styles.comingSoon}>{item.com}</Text>}
-            </TouchableOpacity>
-          ))}
-        </View>
+      {profile?.address ? (
+        <AppText variant="bodySmall" style={{ color: colors.onSurfaceVariant, marginBottom: spacing.lg }}>
+          {profile.address}
+        </AppText>
+      ) : null}
 
-        <View style={styles.columnCard}>
-          <Text style={Typography.subtitle}>🗓 Your next booking is on</Text>
-          <Text style={[Typography.default, { color: Colors.light.textMuted }]}>
-            Thursday, June 27 - 5:00 PM
-          </Text>
-          <TouchableOpacity style={styles.bookingButton}>
-            <Text style={styles.bookingText}>Book A Service</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Section title */}
+      <AppText variant="titleMedium" style={{ color: colors.onBackground, marginBottom: spacing.md, textAlign: 'center' }}>
+        What Chore?
+      </AppText>
 
-        <View style={styles.gridContainer}>
-          <TouchableOpacity
-            style={styles.gridCard}
-            onPress={() => navigation.navigate("PricingEstimate")}
+      {/* Service grid */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: spacing.lg }}>
+        {SERVICE_TYPES.map((svc) => (
+          <AppCard
+            key={svc.id}
+            elevation={1}
+            onPress={
+              svc.available
+                ? () => navigation.navigate('Clean', { serviceType: svc.id })
+                : undefined
+            }
+            style={{
+              width: '48%',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: 120,
+              marginBottom: spacing.sm,
+              opacity: svc.available ? 1 : 0.5,
+            }}
           >
-            <Octicons name="history" size={24} color="black" />
-            <Text style={styles.gridText}>Summaries</Text>
-          </TouchableOpacity>
+            {renderIcon(svc)}
+            <AppText variant="bodyMedium" style={{ color: colors.onSurface, marginTop: spacing.xs, fontWeight: '600', textAlign: 'center' }}>
+              {svc.shortLabel}
+            </AppText>
+            {!svc.available ? (
+              <AppText variant="bodySmall" style={{ color: colors.onSurfaceVariant, fontStyle: 'italic' }}>
+                Coming soon
+              </AppText>
+            ) : null}
+          </AppCard>
+        ))}
+      </View>
 
-          <TouchableOpacity
-            style={styles.gridCard}
-            onPress={() => navigation.navigate("Chat")}
-          >
-            <Icon name="comments" size={22} color="#000" />
-            <Text style={styles.gridText}>Talk to Janitor</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      {/* Next booking card */}
+      {/* <AppCard elevation={2} style={{ alignItems: 'center', marginBottom: spacing.lg, paddingVertical: spacing.lg }}>
+        <AppText variant="titleSmall" style={{ color: colors.onSurface, marginBottom: spacing.xs }}>
+          Your next booking
+        </AppText>
+        <AppText variant="bodyMedium" style={{ color: colors.onSurfaceVariant, marginBottom: spacing.md }}>
+          No upcoming bookings
+        </AppText>
+        <AppButton
+          title="Book A Service"
+          variant="filled"
+          onPress={() => navigation.navigate('Clean')}
+        />
+      </AppCard> */}
+
+      {/* Quick actions */}
+      <View 
+      style={{  marginBottom: spacing.lg }}>
+       
+        <AppCard elevation={2} onPress={() => navigation.navigate('Bookings')} style={{ width: '100%', height: 120, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.md }}>
+          <MaterialIcons name="receipt-long" size={28} color={colors.primary} />
+          <AppText variant="bodyMedium" style={{ color: colors.onSurface, marginTop: spacing.xs, fontWeight: '600' }}>
+            Bookings
+          </AppText>
+        </AppCard>
+      </View>
+    </ScreenWrapper>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    justifyContent: "space-between",
-    marginBottom: 15,
-  },
-
-  cardText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.light.text,
-    textAlign: "center",
-  },
-  comingSoon: {
-    fontSize: 12,
-    fontStyle: "italic",
-    color: Colors.light.textMuted,
-  },
-  gridContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-
-  gridCard: {
-    backgroundColor: Colors.light.accent,
-    borderColor: Colors.dark.text,
-    borderWidth: 0.5,
-    padding: 20,
-    borderRadius: 10,
-    height: 120,
-    alignItems: "center",
-    justifyContent: "center",
-    width: "48%",
-    marginBottom: 12,
-  },
-  gridText: {
-    marginTop: 10,
-    color: "#000",
-    fontWeight: "bold",
-  },
-  columnCard: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.dark.primary,
-    borderColor: Colors.dark.text,
-    borderWidth: 1,
-    padding: 16,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  bookingButton: {
-    borderColor: Colors.dark.shadow,
-    borderWidth: 0.5,
-    borderRadius: 15,
-    paddingHorizontal: 15,
-    paddingVertical: Spacing.xs,
-    marginVertical: 10,
-  },
-  bookingText: {
-    color: "white",
-  },
-});
