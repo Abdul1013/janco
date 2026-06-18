@@ -56,10 +56,14 @@ async def create_pool() -> None:
         and "127.0.0.1" not in dsn
     )
 
+    # max_size=20 is safe for Supabase's direct connection limit (~100 raw connections).
+    # For 5,000 CCU in production, enable PgBouncer in Transaction mode (see architecture
+    # docs) and raise this to 100 — PgBouncer multiplexes thousands of app connections
+    # onto Postgres's limited raw connection pool.
     _pool = await asyncpg.create_pool(
         dsn=dsn,
         min_size=2,
-        max_size=10,
+        max_size=20,
         command_timeout=30,
         ssl="require" if ssl_needed else None,
     )
