@@ -6,9 +6,10 @@ Analyses room images to estimate:
   2. **Clutter level** (0.0 – 1.0) indicating extra cleaning effort.
   3. **Price modifier** — multiplier applied to the base price.
 
-In production this module delegates to a TensorFlow Lite model for
-object detection and spatial estimation.  In mock mode (default for
-beta) it uses heuristic fallbacks based on image metadata.
+Photo analysis uses Pillow for edge detection and brightness distribution
+when available, falling back to a pure-Python heuristic otherwise.
+Manual dimension entry (analyse_room_with_dimensions) is the most accurate
+path and is always available.
 
 This module has **no I/O**: it receives data and returns a result dict.
 Every function is independently testable.
@@ -153,68 +154,52 @@ def analyse_room_image(
 ) -> ScanResult:
     """Analyse a room image and return size/clutter estimates.
 
-    In the current beta, this uses a heuristic analysis based on
-    image data characteristics.  The AI model slot is reserved for
-    production deployment with TensorFlow Lite object detection.
+    Uses Pillow (when available) for edge-density area estimation and
+    brightness-based clutter detection.  Falls back to a pure-Python
+    heuristic if Pillow is not installed or the image cannot be decoded.
+
+    Camera-based estimates carry honest low confidence (~0.45).
+    Use analyse_room_with_dimensions() for high-confidence results.
 
     Args:
         image_base64: Base64-encoded JPEG/PNG image data.
-        width_hint: Optional camera resolution width (pixels).
-        height_hint: Optional camera resolution height (pixels).
+        width_hint: Camera resolution width in pixels (from expo-camera).
+        height_hint: Camera resolution height in pixels (from expo-camera).
 
     Returns:
         ScanResult with all analysis fields populated.
     """
-    details: list[str] = []
-
-    # ── Decode and extract features ────────────────────────────────
     try:
         raw = base64.b64decode(image_base64)
-        file_size = len(raw)
     except Exception:
-        # Fallback for invalid base64
-        file_size = len(image_base64)
+        raw = b""
 
-    # ── Heuristic: estimate area from image complexity ─────────────
-    # Larger, more complex images tend to capture bigger rooms.
-    # This is a deliberate simplification for beta — the production
-    # pipeline replaces this with monocular depth estimation.
+    # ── Attempt Pillow-based analysis ─────────────────────────────
+    try:
+        from PIL import Image as PILImage
+        import io
 
-    # Use a hash to create deterministic but varied results per image
-    img_hash = hashlib.md5(image_base64[:1000].encode() if isinstance(image_base64, str) else image_base64[:1000]).hexdigest()
-    hash_val = int(img_hash[:8], 16)
+        img = PILImage.open(io.BytesIO(raw)).convert("L")  # grayscale
+        img_w, img_h = img.size
 
-    # Estimate area: 10–60 m² based on file size + hash entropy
-    size_factor = min(file_size / 500_000, 1.0)  # normalise to 0-1
-    hash_factor = (hash_val % 100) / 100.0
-    estimated_area = 10 + (size_factor * 30) + (hash_factor * 20)
-    estimated_area = round(estimated_area, 1)
-    details.append(f"Estimated area: {estimated_area} m²")
+        # Use actual pixel dimensions (reliable — from camera sensor)
+        px_w = img_w
+        px_h = img_h
 
-    # ── Heuristic: estimate clutter from byte entropy ──────────────
-    # Higher entropy in image data correlates with more objects/detail
-    if file_size > 0:
-        sample = raw[:min(4096, file_size)] if isinstance(raw, bytes) else b""
-        if sample:
-            byte_counts = [0] * 256
-            for b in sample:
-                byte_counts[b] += 1
-            entropy = 0.0
-            for count in byte_counts:
-                if count > 0:
-                    prob = count / len(sample)
-                    entropy -= prob * math.log2(prob)
-            # Normalise entropy (max = 8 for random data)
-            clutter_score = min(entropy / 8.0, 1.0)
-        else:
-            clutter_score = 0.4
-    else:
-        clutter_score = 0.4
+        estimated_area, clutter_score, details = _pillow_analyse(img, px_w, px_h)
+        analysis_mode = "photo_estimate"
+        # Confidence: honest low value for single-image estimation
+        confidence = round(0.40 + (0.05 if width_hint else 0), 2)
+        confidence = min(confidence, 0.50)
+
+    except Exception:
+        # Pillow unavailable or image decode failed — use improved heuristic
+        estimated_area, clutter_score, details, analysis_mode = _fallback_heuristic(
+            raw, width_hint, height_hint
+        )
+        confidence = 0.30
 
     clutter_score = round(clutter_score, 2)
-    details.append(f"Clutter score: {clutter_score}")
-
-    # ── Classify ───────────────────────────────────────────────────
     room_size = classify_room_size(estimated_area)
     clutter_level = classify_clutter(clutter_score)
     price_modifier = calculate_price_modifier(room_size, clutter_level)
@@ -222,10 +207,7 @@ def analyse_room_image(
     details.append(f"Room classification: {room_size.value}")
     details.append(f"Clutter classification: {clutter_level.value}")
     details.append(f"Price modifier: {price_modifier}x")
-
-    # Confidence is lower for heuristic mode
-    confidence = round(0.55 + (size_factor * 0.2) + (0.1 if width_hint else 0), 2)
-    confidence = min(confidence, 0.85)
+    details.append("Estimate only — tap 'Adjust' if size looks wrong.")
 
     return ScanResult(
         estimated_area=estimated_area,
@@ -234,9 +216,162 @@ def analyse_room_image(
         clutter_score=clutter_score,
         price_modifier=price_modifier,
         confidence=confidence,
-        analysis_mode="heuristic",
+        analysis_mode=analysis_mode,
         details=details,
     )
+
+
+def _pillow_analyse(img: "PILImage.Image", px_w: int, px_h: int) -> tuple[float, float, list[str]]:
+    """Estimate room area and clutter from a grayscale Pillow image.
+
+    Area estimation:
+    - Most phone cameras have a horizontal FoV of ~65°.
+    - At a wall distance d (metres), visible width = 2 × d × tan(32.5°) ≈ 1.274d.
+    - We assume a reference wall height of 2.7m and estimate the fraction
+      of the frame occupied by the opposite wall using row-brightness variance.
+    - Aspect ratio from edge density refines the depth/width ratio.
+
+    Clutter estimation:
+    - Variance in the lower-third of the image (floor area) indicates objects.
+    """
+    details: list[str] = []
+
+    # ── Image geometry ─────────────────────────────────────────────
+    aspect_ratio = px_w / max(px_h, 1)
+
+    # Downsample to at most 200 columns for speed
+    scale = min(1.0, 200 / px_w)
+    small_w = max(1, int(px_w * scale))
+    small_h = max(1, int(px_h * scale))
+    small = img.resize((small_w, small_h))
+    pixels = list(small.getdata())
+
+    rows = [pixels[i * small_w:(i + 1) * small_w] for i in range(small_h)]
+
+    # ── Horizontal edge density (row-to-row variance) ──────────────
+    # Walls produce strong horizontal edges; more edges → narrower/deeper room
+    h_edges = 0.0
+    for i in range(1, small_h):
+        row_diff = sum(abs(rows[i][j] - rows[i - 1][j]) for j in range(small_w))
+        h_edges += row_diff / small_w
+    h_edge_density = h_edges / max(small_h - 1, 1)
+
+    # ── Estimate room depth from wall coverage fraction ────────────
+    # Rows in the upper 50% with high brightness variance indicate walls
+    upper_half = rows[:small_h // 2]
+    row_variances = []
+    for row in upper_half:
+        mean = sum(row) / len(row)
+        var = sum((v - mean) ** 2 for v in row) / len(row)
+        row_variances.append(var)
+    mean_upper_var = sum(row_variances) / max(len(row_variances), 1)
+
+    # Normalise: typical room interior variance 200–2000
+    wall_fraction = min(mean_upper_var / 1500.0, 1.0)
+
+    # Perspective model: wall_fraction drives estimated depth
+    # wall_fraction ~0 → small/close room, ~1 → large/spacious
+    ref_wall_height = 2.7  # metres (standard Nigerian room)
+    tan_half_vfov = math.tan(math.radians(24.5))  # ~49° vertical FoV
+    depth_m = ref_wall_height / (2 * max(tan_half_vfov * (0.3 + wall_fraction * 0.7), 0.1))
+    depth_m = max(2.5, min(depth_m, 8.0))
+
+    tan_half_hfov = math.tan(math.radians(32.5))  # 65° horizontal FoV
+    width_m = 2 * depth_m * tan_half_hfov
+
+    # Aspect ratio from edge density: high h_edge_density → more depth variation
+    room_aspect = max(0.6, min(aspect_ratio * (1 + h_edge_density / 200), 1.8))
+    estimated_area = round(width_m * (width_m / room_aspect), 1)
+    estimated_area = max(6.0, min(estimated_area, 80.0))
+
+    details.append(f"Estimated area: {estimated_area} m² (photo analysis)")
+
+    # ── Clutter from lower-third variance ─────────────────────────
+    lower_third = rows[2 * small_h // 3:]
+    if lower_third:
+        flat = [p for row in lower_third for p in row]
+        mean_f = sum(flat) / len(flat)
+        var_f = sum((p - mean_f) ** 2 for p in flat) / len(flat)
+        # Variance 0–8000+ maps to clutter 0–1
+        clutter_score = min(var_f / 6000.0, 1.0)
+    else:
+        clutter_score = 0.35
+
+    details.append(f"Clutter score: {clutter_score:.2f} (floor-area analysis)")
+
+    return estimated_area, clutter_score, details
+
+
+def _fallback_heuristic(
+    raw: bytes,
+    width_hint: Optional[int],
+    height_hint: Optional[int],
+) -> tuple[float, float, list[str], str]:
+    """Pure-Python fallback when Pillow is unavailable."""
+    details: list[str] = []
+    file_size = len(raw)
+
+    if width_hint and height_hint and width_hint > 0 and height_hint > 0:
+        # Use actual camera pixel dimensions — much better than file size
+        aspect = width_hint / height_hint
+        # Typical phone photo: 4032×3024 (12MP) or 4000×3000
+        # Normalise by 4000×3000 reference
+        px_area_factor = min((width_hint * height_hint) / (4000 * 3000), 1.0)
+        # Landscape-oriented shots of rooms tend to be wider than they are deep
+        depth_factor = 1.0 / max(aspect, 0.5)
+        estimated_area = round(8.0 + (px_area_factor * 20) + (depth_factor * 12), 1)
+        details.append(f"Estimated area: {estimated_area} m² (pixel-dimension estimate)")
+    else:
+        # File size proxy — better than nothing, but unreliable
+        size_factor = min(file_size / 400_000, 1.0)
+        # Use JPEG header parsing to get dimensions if possible
+        img_w, img_h = _parse_jpeg_dimensions(raw)
+        if img_w and img_h:
+            aspect = img_w / img_h
+            estimated_area = round(10 + size_factor * 25 + (1 / max(aspect, 0.5)) * 8, 1)
+            details.append(f"Estimated area: {estimated_area} m² (JPEG header + size)")
+        else:
+            estimated_area = round(10 + size_factor * 30, 1)
+            details.append(f"Estimated area: {estimated_area} m² (file-size estimate)")
+
+    estimated_area = max(6.0, min(estimated_area, 80.0))
+
+    # Clutter from byte entropy of lower half of the image bytes
+    if file_size > 100:
+        lower_half = raw[file_size // 2:]
+        sample = lower_half[:min(4096, len(lower_half))]
+        byte_counts = [0] * 256
+        for b in sample:
+            byte_counts[b] += 1
+        entropy = 0.0
+        for count in byte_counts:
+            if count > 0:
+                prob = count / len(sample)
+                entropy -= prob * math.log2(prob)
+        clutter_score = min(entropy / 8.0, 1.0)
+    else:
+        clutter_score = 0.4
+
+    details.append(f"Clutter score: {clutter_score:.2f} (entropy estimate)")
+    return estimated_area, clutter_score, details, "heuristic_fallback"
+
+
+def _parse_jpeg_dimensions(data: bytes) -> tuple[Optional[int], Optional[int]]:
+    """Extract width and height from a JPEG stream without Pillow."""
+    if len(data) < 4 or data[:2] != b"\xff\xd8":
+        return None, None
+    i = 2
+    while i < len(data) - 8:
+        if data[i] != 0xFF:
+            break
+        marker = data[i + 1]
+        if marker in (0xC0, 0xC1, 0xC2):  # SOF0, SOF1, SOF2
+            h = (data[i + 5] << 8) | data[i + 6]
+            w = (data[i + 7] << 8) | data[i + 8]
+            return w, h
+        seg_len = (data[i + 2] << 8) | data[i + 3]
+        i += 2 + seg_len
+    return None, None
 
 
 def analyse_room_with_dimensions(
