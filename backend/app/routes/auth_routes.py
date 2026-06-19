@@ -41,7 +41,10 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/signup")
 async def signup(payload: UserCreate):
-    return await auth_service.signup(payload.email, payload.password, payload.full_name)
+    return await auth_service.signup(
+        payload.email, payload.password, payload.full_name,
+        accepted_terms=payload.accepted_terms,
+    )
 
 
 @router.post("/login")

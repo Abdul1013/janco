@@ -1,164 +1,101 @@
 """
-Booking routes for Co-Janitors
-Handles job creation and janitor assignment
+Booking Routes — Thin HTTP Handlers.
+
+All business logic is delegated to ``booking_service``.  Routes only
+parse requests, call the service, and return formatted responses.
+Every endpoint requires JWT authentication.
 """
 
-from fastapi import APIRouter, HTTPException, Query
-from app.services.supabase_service import supabase
-from app.schema.job_schema import JobCreate, BookJobPayload, JobResponse
-from datetime import datetime
-import json
+from __future__ import annotations
 
-router = APIRouter(prefix="/jobs", tags=["Jobs"])
+from fastapi import APIRouter, Depends, Query
 
+from app.middleware.auth import get_current_user
+from app.schema.job_schema import JobCreate, JobStatusUpdate
+from app.services import booking_service
 
-@router.post("/create")
-async def create_job(job: JobCreate):
-    """Create a new job"""
-    try:
-        data = {
-            "user_id": job.user_id,
-            "janitor_id": job.janitor_id,
-            "service_type": job.service_type,
-            "scheduled_date": job.scheduled_date,
-            "scheduled_time": job.scheduled_time,
-            "address": job.address,
-            "latitude": job.latitude,
-            "longitude": job.longitude,
-            "room_data": job.room_data,
-            "extras": job.extras,
-            "notes": job.notes,
-            "status": "pending",
-            "payment_status": "unpaid",
-            "created_at": datetime.utcnow().isoformat(),
-        }
-        
-        result = supabase.table("jobs").insert(data).execute()
-        
-        if not result.data:
-            raise HTTPException(status_code=400, detail="Failed to create job")
-        
-        return {
-            "message": "Job created successfully",
-            "job": result.data[0]
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
 
-@router.post("/book-job")
-async def book_job(payload: BookJobPayload):
-    """Book a job with a specific janitor"""
-    try:
-        data = {
-            "user_id": payload.user_id,
-            "janitor_id": payload.janitor_id,
-            "service_type": payload.service_type,
-            "scheduled_time": payload.scheduled_time,
-            "location": json.dumps(payload.location) if payload.location else None,
-            "metadata": json.dumps(payload.metadata) if payload.metadata else None,
-            "status": "confirmed",
-            "payment_status": "pending",
-            "created_at": datetime.utcnow().isoformat(),
-        }
-        
-        result = supabase.table("jobs").insert(data).execute()
-        
-        if not result.data:
-            raise HTTPException(status_code=400, detail="Failed to book job")
-        
-        job = result.data[0]
-        
-        return {
-            "message": "Job booked successfully",
-            "job": job,
-            "success": True
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@router.post("")
+async def create_booking(
+    payload: JobCreate,
+    user_id: str = Depends(get_current_user),
+):
+    """Create a new booking. Price is calculated server-side."""
+    job = await booking_service.create_booking(user_id, payload)
+    return {"message": "Booking created.", "job": job}
+
+
+@router.get("")
+async def get_my_bookings(
+    status: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    user_id: str = Depends(get_current_user),
+):
+    """List the current user's bookings with pagination."""
+    return await booking_service.get_user_bookings(user_id, status, page, limit)
+
+
+@router.get("/assigned")
+async def get_assigned_bookings(
+    status: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    user_id: str = Depends(get_current_user),
+):
+    """List jobs assigned to the current janitor (filtered by janitor_id)."""
+    return await booking_service.get_janitor_bookings(user_id, status, page, limit)
 
 
 @router.get("/{job_id}")
-async def get_job(job_id: str):
-    """Get job by ID"""
-    try:
-        result = supabase.table("jobs").select("*").eq("id", job_id).single().execute()
-        
-        if not result.data:
-            raise HTTPException(status_code=404, detail="Job not found")
-        
-        return result.data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+async def get_booking(
+    job_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Get a single booking by ID (must be owner or assigned janitor)."""
+    return await booking_service.get_booking(user_id, job_id)
 
 
-@router.get("/user/{user_id}")
-async def get_user_jobs(user_id: str, status: str = Query(None)):
-    """Get all jobs for a user, optionally filtered by status"""
-    try:
-        query = supabase.table("jobs").select("*").eq("user_id", user_id)
-        
-        if status:
-            query = query.eq("status", status)
-        
-        result = query.execute()
-        
-        return {
-            "jobs": result.data,
-            "count": len(result.data) if result.data else 0
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@router.patch("/{job_id}/status")
+async def update_status(
+    job_id: str,
+    payload: JobStatusUpdate,
+    user_id: str = Depends(get_current_user),
+):
+    """Update a booking's status (validates transition rules)."""
+    job = await booking_service.update_booking_status(
+        user_id, job_id, payload.new_status.value
+    )
+    return {"message": "Status updated.", "job": job}
 
 
-@router.patch("/{job_id}")
-async def update_job_status(job_id: str, status: str = Query(None), payment_status: str = Query(None)):
-    """Update job status"""
-    try:
-        update_data = {}
-        
-        if status:
-            update_data["status"] = status
-        if payment_status:
-            update_data["payment_status"] = payment_status
-        
-        if not update_data:
-            raise HTTPException(status_code=400, detail="No fields to update")
-        
-        result = supabase.table("jobs").update(update_data).eq("id", job_id).execute()
-        
-        if not result.data:
-            raise HTTPException(status_code=404, detail="Job not found or update failed")
-        
-        return {
-            "message": "Job updated successfully",
-            "job": result.data[0]
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@router.post("/{job_id}/cancel")
+async def cancel_booking(
+    job_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Cancel a pending or confirmed booking."""
+    job = await booking_service.cancel_booking(user_id, job_id)
+    return {"message": "Booking cancelled.", "job": job}
 
 
-@router.delete("/{job_id}")
-async def delete_job(job_id: str):
-    """Delete a job (only if pending)"""
-    try:
-        # First check job status
-        result = supabase.table("jobs").select("*").eq("id", job_id).single().execute()
-        
-        if not result.data:
-            raise HTTPException(status_code=404, detail="Job not found")
-        
-        job = result.data
-        
-        if job.get("status") not in ["pending", "cancelled"]:
-            raise HTTPException(status_code=400, detail="Can only delete pending or cancelled jobs")
-        
-        # Delete the job
-        delete_result = supabase.table("jobs").delete().eq("id", job_id).execute()
-        
-        return {
-            "message": "Job deleted successfully",
-            "job_id": job_id
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@router.post("/{job_id}/accept")
+async def accept_job(
+    job_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Janitor accepts a pending job assigned to them (→ confirmed)."""
+    job = await booking_service.accept_job(user_id, job_id)
+    return {"message": "Job accepted.", "job": job}
+
+
+@router.post("/{job_id}/reject")
+async def reject_job(
+    job_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Janitor rejects a pending job; it is unassigned for re-matching."""
+    job = await booking_service.reject_job(user_id, job_id)
+    return {"message": "Job rejected.", "job": job}
