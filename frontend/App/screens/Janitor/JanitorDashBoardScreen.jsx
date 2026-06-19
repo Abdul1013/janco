@@ -26,7 +26,7 @@ export default function JanitorDashBoardScreen() {
   const {
     profile, availability, updateAvailability,
     jobs, loading, refresh, refreshing,
-    acceptJob, startJob, completeJob,
+    acceptJob, rejectJob, startJob, completeJob,
   } = useJanitorProfile(authProfile?.id);
 
   const activeJobs  = jobs.filter(j => j.status === 'in_progress');
@@ -105,11 +105,19 @@ export default function JanitorDashBoardScreen() {
             style={{ flex: 1, minHeight: 36 }}
           />
           {isPending && (
-            <AppButton
-              title="Accept"
-              onPress={() => handleAction('Accept Job', acceptJob, item.id)}
-              style={{ flex: 1, minHeight: 36 }}
-            />
+            <>
+              <AppButton
+                title="Reject"
+                variant="outlined"
+                onPress={() => handleAction('Reject Job', rejectJob, item.id)}
+                style={{ flex: 1, minHeight: 36 }}
+              />
+              <AppButton
+                title="Accept"
+                onPress={() => handleAction('Accept Job', acceptJob, item.id)}
+                style={{ flex: 1, minHeight: 36 }}
+              />
+            </>
           )}
           {isConfirmed && (
             <AppButton

@@ -12,15 +12,15 @@
  * @module navigation/RootNavigator
  */
 
-import React from 'react';
+
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../hooks/authContext';
 import { useTheme } from '../constants/theme/ThemeContext';
-import useNotifications from '../hooks/useNotifications';
 
 // Auth screens
 import LoginScreen from '../screens/auth/LoginScreen';
 import SignupScreen from '../screens/auth/SignupScreen';
+import LegalScreen from '../screens/LegalScreen';
 import ForgetPasswordScreen from '../screens/auth/ForgetPasswordScreen';
 import RegistrationScreen from '../screens/auth/RegistrationScreen';
 import UpdatePasswordScreen from '../screens/auth/UpdatePasswordScreen';
@@ -43,9 +43,6 @@ import VerificationScreen from '../screens/Janitor/VerificationScreen';
 // Room Scan
 import RoomScanScreen from '../screens/RoomScanScreen';
 
-// Payment
-import PaymentScreen from '../screens/PaymentScreen';
-
 // Rating
 import RatingScreen from '../screens/RatingScreen';
 
@@ -64,6 +61,7 @@ function AuthStack() {
     <AuthStackNav.Navigator screenOptions={{ headerShown: false }}>
       <AuthStackNav.Screen name="Login" component={LoginScreen} />
       <AuthStackNav.Screen name="Signup" component={SignupScreen} />
+      <AuthStackNav.Screen name="Legal" component={LegalScreen} options={{ headerShown: true }} />
       <AuthStackNav.Screen name="ForgotPassword" component={ForgetPasswordScreen} />
       <AuthStackNav.Screen name="UpdatePassword" component={UpdatePasswordScreen} />
       <AuthStackNav.Screen name="AuthCallback" component={AuthCallbackScreen} />
@@ -88,9 +86,6 @@ function MainStack() {
       <MainStackNav.Screen name="Chat" component={ChatScreen} />
       <MainStackNav.Screen name="Bookings" component={BookingHistoryScreen} />
 
-      {/* Payment */}
-      <MainStackNav.Screen name="Payment" component={PaymentScreen} />
-
       {/* Rating */}
       <MainStackNav.Screen name="Rating" component={RatingScreen} />
 
@@ -99,6 +94,9 @@ function MainStack() {
       <MainStackNav.Screen name="JanitorStatus" component={JanitorStatusScreen} />
       <MainStackNav.Screen name="JanitorDashBoard" component={JanitorDashBoardScreen} />
       <MainStackNav.Screen name="Verification" component={VerificationScreen} />
+
+      {/* Legal docs (also reachable from settings) */}
+      <MainStackNav.Screen name="Legal" component={LegalScreen} options={{ headerShown: true }} />
     </MainStackNav.Navigator>
   );
 }
@@ -109,10 +107,6 @@ function MainStack() {
 export default function RootNavigator() {
   const { user, profile, loading } = useAuth();
   const { colors } = useTheme();
-
-  // Register push notification token and wire up notification tap handlers.
-  // Must be called here (inside NavigationContainer) so useNavigation() works.
-  useNotifications();
 
   // Still restoring tokens
   if (loading) return <SplashScreen />;

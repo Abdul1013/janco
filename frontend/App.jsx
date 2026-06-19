@@ -1,11 +1,14 @@
 import React from "react";
 import { AuthProvider } from "./App/hooks/authContext";
-import AppContent from "./App/components/AppContent"; 
+import { ThemeProvider } from "./App/constants/theme/ThemeContext";
+import AppContent from "./App/components/AppContent";
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
