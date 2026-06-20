@@ -35,6 +35,9 @@ class _Settings:
             os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7")
         )
 
+        # Environment ("development" | "staging" | "production")
+        self.APP_ENV: str = os.getenv("APP_ENV", "development")
+
         # CORS (comma-separated origins)
         raw_origins = os.getenv(
             "CORS_ORIGINS",
@@ -45,6 +48,37 @@ class _Settings:
         # Rate-limit defaults (requests per minute)
         self.RATE_LIMIT_GENERAL: int = int(os.getenv("RATE_LIMIT_GENERAL", "100"))
         self.RATE_LIMIT_AUTH: int = int(os.getenv("RATE_LIMIT_AUTH", "5"))
+
+        # Payment (Paystack)
+        self.PAYSTACK_SECRET_KEY: str = os.getenv("PAYSTACK_SECRET_KEY", "")
+        self.PAYSTACK_WEBHOOK_SECRET: str = os.getenv("PAYSTACK_WEBHOOK_SECRET", "")
+
+        # Email (Resend)
+        self.RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+        self.FROM_EMAIL: str = os.getenv("FROM_EMAIL", "noreply@janco.app")
+
+        # SMS (Termii) — janitor alerts & reminders. Mocked (logged) when no key.
+        self.TERMII_API_KEY: str = os.getenv("TERMII_API_KEY", "")
+        self.TERMII_SENDER_ID: str = os.getenv("TERMII_SENDER_ID", "JANCO")
+        self.SMS_MOCK: bool = os.getenv("SMS_MOCK", "true").lower() == "true"
+
+        # Scheduled reminders (in-process loop)
+        self.REMINDERS_ENABLED: bool = os.getenv("REMINDERS_ENABLED", "true").lower() == "true"
+        self.REMINDER_POLL_MINUTES: int = int(os.getenv("REMINDER_POLL_MINUTES", "10"))
+        self.REMINDER_MORNING_HOUR: int = int(os.getenv("REMINDER_MORNING_HOUR", "7"))
+        self.REMINDER_SOON_HOURS: int = int(os.getenv("REMINDER_SOON_HOURS", "3"))
+        # App timezone offset from UTC in hours (Nigeria / WAT = +1)
+        self.APP_TZ_OFFSET_HOURS: int = int(os.getenv("APP_TZ_OFFSET_HOURS", "1"))
+
+        # Error monitoring
+        self.SENTRY_DSN: str = os.getenv("SENTRY_DSN", "")
+
+        # Redis (optional — enables rate limiter, pricing cache, pub/sub)
+        self.REDIS_URL: str = os.getenv("REDIS_URL", "")
+
+        # Legal docs — bump when Terms/Privacy content materially changes.
+        # The active version is stored against each signup (profiles.terms_version).
+        self.LEGAL_VERSION: str = os.getenv("LEGAL_VERSION", "1.0")
 
     @staticmethod
     def _require(name: str) -> str:
