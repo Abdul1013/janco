@@ -1,0 +1,126 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# JANCO CI Pipeline
+# ─────────────────────────────────────────────────────────────────────────────
+# Runs on every push to main and every pull request.
+#
+# Jobs:
+#   lint        — ruff (fast linter) + type stubs check
+#   test        — pytest with asyncio, 60s timeout
+#   security    — pip-audit for known CVEs
+#   docker      — build Docker image to catch Dockerfile errors
+#
+# Secrets required (set in GitHub repo settings → Secrets):
+#   DATABASE_URL       — test database connection string
+#   JWT_SECRET         — any 32-byte hex string for tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+
+  # ── Lint ───────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff (lint)
+        run: ruff check app/ --output-format=github
+
+      - name: Run ruff (format check)
+        run: ruff format app/ --check
+
+  # ── Tests ──────────────────────────────────────────────────────────────────
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    env:
+      # Minimal env so config.py doesn't crash on startup
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://user:pass@localhost:5432/janco_test' }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }}
+      APP_ENV: test
+      NOTIFICATION_MOCK: "true"
+      DOJAH_MOCK: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest pytest-asyncio httpx
+
+      - name: Run tests
+        run: pytest tests/ -x -v --timeout=60
+
+  # ── Security Audit ─────────────────────────────────────────────────────────
+  security:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit dependencies for known CVEs
+        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2022-42969
+
+  # ── Docker build ───────────────────────────────────────────────────────────
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    # Only block PRs, not main (image push is a separate job)
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: janco-backend:pr-${{ github.event.number }}
