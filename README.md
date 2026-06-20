@@ -1,31 +1,31 @@
 
-# 🧼 Co-Janitors.ng
+# Co-Janitors.ng
 
 **Co-Janitors.ng** is a modern, AI-powered janitorial services platform that delivers on-demand and subscription-based cleaning services to residential and commercial spaces across Nigeria — starting with Ibadan, and expanding to Abuja, Lagos, and beyond.
-🚀 Clean spaces, happy faces.
+Clean spaces, happy faces.
 
 > Built for speed, scalability, and service excellence.
 
 ---
 
-## 🚀 Overview
+## Overview
 
 Co-Janitors connects users with trained janitors using intelligent job scheduling and pricing tools. With AI-based area estimation, smart cleaner matching, and mobile-first access, it's the Uber for cleaning in West Africa.
 
-### ✨ Core Features
+###  Core Features
 
-- 📱 Cross-platform mobile app (React Native + Expo)
-- ⚙️ FastAPI backend with Python (secure and async)
-- 🤖 AI-powered area measurement via OpenCV + YOLO
-- 📍 Location-based janitor assignment
-- 💰 Wallet & subscription billing (Paystack/Stripe)
-- 🔐 Supabase authentication and PostgreSQL database
-- 📦 Supabase Storage for image uploads
-- 🔔 Notifications via Firebase and WhatsApp (Termii)
+-  Cross-platform mobile app (React Native + Expo)
+-  FastAPI backend with Python (secure and async)
+-  AI-powered area measurement via OpenCV + YOLO
+-  Location-based janitor assignment
+-  Wallet & subscription billing (Paystack/Stripe)
+-  Supabase authentication and PostgreSQL database
+-  Supabase Storage for image uploads
+-  Notifications via Firebase and WhatsApp (Termii)
 
 ---
 
-## 🧱 Tech Stack
+##  Tech Stack
 
 | Layer        | Tech Used              |
 |--------------|------------------------|
@@ -39,21 +39,29 @@ Co-Janitors connects users with trained janitors using intelligent job schedulin
 
 ---
 
-## 📦 Project Structure
+##  Project Structure
 
 create a virtual env
-python3 -m venv venv
+`python3 -m venv venv`
 
 activate virtual env
-source venv/bin/activate
+`source venv/bin/activate`
 
-uvicorn app.main:app --reload
+install fast api server
+`pip install uvicorn fastapi`
+
+
+start fast api server
+`uvicorn app.main:app --reload`
+
 pip install supabase
 pip list | grep supabase
 
+pip freeze > requirements.txt
 
 
-## 💡 Use Cases
+
+##  Use Cases
 
 - A tenant books a monthly deep cleaning subscription
 - Uploads a photo of their living room
@@ -65,21 +73,26 @@ pip list | grep supabase
 
 ---
 
-## 📈 Startup Vision
+##  Startup Vision
 
 Co-Janitors aims to become Nigeria’s #1 janitorial tech startup, combining logistics, AI, and human labor to clean homes and lives more efficiently. Built by locals, for locals, with global tech standards.
 
 ---
 
-## 📜 License
+##  License
 
 MIT License — feel free to fork, contribute, or deploy with attribution.
 
 ---
 
-## 🤝 Support the Vision
+##  Support the Vision
 
 We're open to collaborators, investors, and community testers. Reach out at [info@co-janitors.ng](mailto:info@co-janitors.ng)
 
 
 bookingscreen -> priceestimate -> nearby/choose janitor ->  job status -> chat screen 
+
+admin@janco.ng / Admin@2025
+Test@2025
+adebayo.test@janco.ng
+chidinma.test@janco.ng
