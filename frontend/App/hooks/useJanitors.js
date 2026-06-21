@@ -38,10 +38,17 @@ export const useJanitorProfile = (userId) => {
     }
   };
 
-  // Accept a pending job (pending → confirmed)
+  // Accept a pending job (pending → confirmed) via the dedicated janitor endpoint
   const acceptJob = async (jobId) => {
-    const { error } = await bookingApi.updateStatus(jobId, 'confirmed');
+    const { error } = await bookingApi.acceptJob(jobId);
     await fetchJobs(); // always refresh — even on error, stale state may have changed
+    return error ? String(error) : null;
+  };
+
+  // Reject a pending job — unassigns it for re-matching
+  const rejectJob = async (jobId) => {
+    const { error } = await bookingApi.rejectJob(jobId);
+    await fetchJobs();
     return error ? String(error) : null;
   };
 
@@ -74,6 +81,7 @@ export const useJanitorProfile = (userId) => {
     refreshing,
     refresh,
     acceptJob,
+    rejectJob,
     startJob,
     completeJob,
   };
