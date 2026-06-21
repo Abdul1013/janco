@@ -64,10 +64,11 @@ const useAuthStore = create((set, get) => ({
    * @param {string} email
    * @param {string} password
    * @param {string} fullName
+   * @param {boolean} acceptedTerms — user agreed to Terms & Privacy Policy.
    */
-  signup: async (email, password, fullName) => {
+  signup: async (email, password, fullName, acceptedTerms = false) => {
     set({ loading: true, error: null });
-    const { data, error } = await authApi.signup(email, password, fullName);
+    const { data, error } = await authApi.signup(email, password, fullName, acceptedTerms);
 
     if (error) {
       set({ loading: false, error });
