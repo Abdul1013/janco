@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: janco-backend
+    env: docker
+    dockerImage: ghcr.io/<your-org>/janco-backend:latest
+    plan: starter
+    region: london
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: DATABASE_URL
+        value: "${{ DATABASE_URL }}"
+        required: true
+      - key: REDIS_URL
+        value: "${{ REDIS_URL }}"
+      - key: SECRET_KEY
+        value: "${{ SECRET_KEY }}"
+        required: true
+      - key: CORS_ORIGINS
+        value: "${{ CORS_ORIGINS }}"
+      - key: UVICORN_WORKERS
+        value: "4"
+      - key: REMINDERS_ENABLED
+        value: "false"
+
+jobs:
+  - type: database
+    name: janco-db
+    plan: starter
+    databaseName: janco_prod

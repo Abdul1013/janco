@@ -53,6 +53,8 @@ install fast api server
 
 start fast api server
 `uvicorn app.main:app --reload`
+`uvicorn app.main:app --host 0.0.0.0 --reload`
+`ipconfig getifaddr en0`
 
 pip install supabase
 pip list | grep supabase
