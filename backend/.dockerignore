@@ -1,0 +1,37 @@
+# Keep secrets, local envs, and dev cruft OUT of the image build context.
+# The Dockerfile does `COPY . .` from ./backend, so anything not ignored here
+# is baked into the image (and pushed to any registry). NEVER ship .env.
+
+# Secrets / local environment
+.env
+.env.*
+!.env.example
+
+# Python virtualenv & bytecode
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Tests & local-only tooling (not needed at runtime)
+tests/
+locustfile.py
+
+# OS / editor noise
+.DS_Store
+*.swp
+
+# VCS
+.git/
+.gitignore
+
+# NOTE: app/legal/*.md is intentionally NOT ignored — legal_routes.py reads
+# those files at runtime, so they must be present in the image.

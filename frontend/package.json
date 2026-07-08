@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
+    "dev": "IP=$(ipconfig getifaddr en0); echo \"Using LAN IP: $IP\"; EXPO_PUBLIC_API_URL=http://$IP:8000/v1 EXPO_PUBLIC_WS_URL=ws://$IP:8000/v1 expo start -c",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web"
