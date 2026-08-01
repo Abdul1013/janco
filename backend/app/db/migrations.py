@@ -288,8 +288,22 @@ CREATE INDEX IF NOT EXISTS idx_notification_log_job ON notification_log(job_id);
 """
 
 
+# Arbitrary constant identifying the migration advisory lock.
+_MIGRATION_LOCK_ID = 918273645
+
+
 async def run_migrations() -> None:
-    """Run CREATE TABLE IF NOT EXISTS for all tables. Safe to call on every startup."""
+    """Run CREATE TABLE IF NOT EXISTS for all tables. Safe to call on every startup.
+
+    Wrapped in a Postgres advisory lock so that when the server runs multiple
+    uvicorn workers, they don't execute the DDL concurrently (which can race on
+    index/constraint creation). Workers serialise here; the second one onward
+    just re-runs the idempotent IF NOT EXISTS statements as fast no-ops.
+    """
     pool = get_pool()
     async with pool.acquire() as conn:
-        await conn.execute(_SCHEMA)
+        await conn.execute("SELECT pg_advisory_lock($1)", _MIGRATION_LOCK_ID)
+        try:
+            await conn.execute(_SCHEMA)
+        finally:
+            await conn.execute("SELECT pg_advisory_unlock($1)", _MIGRATION_LOCK_ID)
