@@ -2,30 +2,31 @@ services:
   - type: web
     name: janco-backend
     env: docker
-    dockerImage: ghcr.io/<your-org>/janco-backend:latest
     plan: starter
-    region: london
+    region: oregon
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
     healthCheckPath: /health
+    autoDeploy: true
     envVars:
       - key: PORT
         value: "8000"
       - key: DATABASE_URL
-        value: "${{ DATABASE_URL }}"
-        required: true
+        fromDatabase:
+          name: janco-db
+          property: connectionString
       - key: REDIS_URL
-        value: "${{ REDIS_URL }}"
+        sync: false
       - key: SECRET_KEY
-        value: "${{ SECRET_KEY }}"
-        required: true
+        generateValue: true
       - key: CORS_ORIGINS
-        value: "${{ CORS_ORIGINS }}"
+        value: "*"
       - key: UVICORN_WORKERS
-        value: "4"
+        value: "2"
       - key: REMINDERS_ENABLED
         value: "false"
 
-jobs:
-  - type: database
-    name: janco-db
-    plan: starter
+databases:
+  - name: janco-db
     databaseName: janco_prod
+    plan: starter
