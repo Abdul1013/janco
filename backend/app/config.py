@@ -41,7 +41,7 @@ class _Settings:
         # CORS (comma-separated origins)
         raw_origins = os.getenv(
             "CORS_ORIGINS",
-            "http://localhost:8081,http://localhost:19006,exp://localhost:8081",
+            "http://localhost:8081,http://localhost:19006,exp://localhost:8081,https://janco-seven.vercel.app,https://janco.vercel.app",
         )
         self.CORS_ORIGINS: list[str] = [o.strip() for o in raw_origins.split(",")]
 

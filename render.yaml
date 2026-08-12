@@ -20,7 +20,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
-        value: "*"
+        value: "https://janco-seven.vercel.app,https://janco.vercel.app"
       - key: UVICORN_WORKERS
         value: "2"
       - key: REMINDERS_ENABLED
