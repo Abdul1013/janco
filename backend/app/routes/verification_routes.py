@@ -11,7 +11,7 @@ All endpoints are protected and restricted to janitor-role users.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
 from app.middleware.auth import get_current_user
@@ -91,3 +91,17 @@ async def status(user_id: str = Depends(get_current_user)):
         Current status, dojah ref, verified_at, retries remaining.
     """
     return await verification_service.get_verification_status(janitor_id=user_id)
+
+
+
+@router.post("/webhook")
+async def webhook(payload: dict):
+    """Endpoint for Dojah webhooks/callbacks.
+
+    This endpoint is intentionally unauthenticated and should be
+    secured via Dojah's webhook signing or network controls in
+    production. It accepts a JSON payload and delegates handling
+    to the verification service.
+    """
+    await verification_service.handle_dojah_webhook(payload)
+    return Response(status_code=204)

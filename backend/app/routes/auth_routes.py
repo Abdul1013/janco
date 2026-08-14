@@ -22,6 +22,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from app.middleware.auth import get_current_user
 from app.repositories import user_repo
 from app.schema.user_schema import (
+    DeleteAccountRequest,
     PasswordResetConfirm,
     PasswordResetRequest,
     PasswordUpdate,
@@ -121,3 +122,18 @@ async def update_password(
 @router.post("/logout")
 async def logout(user_id: str = Depends(get_current_user)):
     return await auth_service.logout(user_id)
+
+
+@router.delete("/account")
+@router.post("/delete-account")
+async def delete_account(
+    payload: DeleteAccountRequest,
+    user_id: str = Depends(get_current_user),
+):
+    """Delete the authenticated account after password confirmation.
+
+    The account is soft-deleted immediately, direct identifiers are anonymized,
+    and all active sessions are invalidated to satisfy data-subject deletion
+    requests while preserving minimum legal records.
+    """
+    return await auth_service.delete_account(user_id, payload.password)
