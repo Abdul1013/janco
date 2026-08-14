@@ -330,3 +330,42 @@ async def update_password(user_id: str, new_password: str) -> dict:
         )
     await token_repo.revoke_all_for_user(user_id)
     return {"message": "Password updated. Please log in again on all devices."}
+
+
+async def delete_account(user_id: str, password: str) -> dict:
+    """Delete the authenticated user's account after password verification.
+
+    This follows a privacy-safe pattern: verify identity, revoke all active
+    refresh tokens, immediately mark the account as deleted and inactive, then
+    anonymize the profile fields so personal data is no longer exposed.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id, password_hash, is_active, deleted_at FROM profiles WHERE id = $1",
+            uuid.UUID(str(user_id)),
+        )
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    if row.get("deleted_at") is not None or row.get("is_active") is False:
+        raise HTTPException(status_code=409, detail="Account already deleted.")
+
+    if not row.get("password_hash") or not verify_password(password, row["password_hash"]):
+        raise HTTPException(status_code=401, detail="Incorrect password.")
+
+    await token_repo.revoke_all_for_user(user_id)
+    await user_repo.anonymize_profile(user_id)
+
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE profiles SET deleted_at = NOW(), deletion_requested_at = NOW(), is_active = FALSE WHERE id = $1",
+            uuid.UUID(str(user_id)),
+        )
+
+    return {
+        "message": "Account deleted successfully.",
+        "status": "deleted",
+        "user_id": user_id,
+    }

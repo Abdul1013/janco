@@ -246,27 +246,23 @@ async def _dojah_id_lookup(id_type: str, id_number: str) -> dict:
     Returns:
         Dict with ``match`` (bool) and ``ref`` (string).
     """
-    import httpx
+    # Prefer POST JSON requests per Dojah docs, but fall back to GET if necessary.
+    from httpx import AsyncClient
 
-    url = f"{DOJAH_BASE_URL}/api/v1/kyc/{id_type}"
-    headers = {
-        "AppId": DOJAH_APP_ID,
-        "Authorization": DOJAH_SECRET,
-        "Content-Type": "application/json",
-    }
-    params = {id_type: id_number}
+    path = f"/api/v1/kyc/{id_type}"
+    json_payload = {id_type: id_number}
 
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(url, headers=headers, params=params)
-            resp.raise_for_status()
-            body = resp.json()
-            return {
-                "match": body.get("entity", {}).get(id_type) is not None,
-                "ref": body.get("entity", {}).get("reference_id", ""),
-            }
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Dojah API error: {str(e)}")
+        body = await _dojah_request("POST", path, json=json_payload)
+    except HTTPException:
+        # Try the older GET-style call as a fallback
+        body = await _dojah_request("GET", path, params=json_payload)
+
+    entity = body.get("entity", {}) if isinstance(body, dict) else {}
+    return {
+        "match": entity.get(id_type) is not None,
+        "ref": entity.get("reference_id", ""),
+    }
 
 
 async def _dojah_liveness_check(dojah_ref: str, image_base64: str) -> bool:
@@ -275,24 +271,133 @@ async def _dojah_liveness_check(dojah_ref: str, image_base64: str) -> bool:
     Returns:
         True if the liveness check passes.
     """
+    path = "/api/v1/kyc/liveness"
+    payload = {"reference_id": dojah_ref, "image": image_base64}
+
+    try:
+        body = await _dojah_request("POST", path, json=payload)
+        entity = body.get("entity", {}) if isinstance(body, dict) else {}
+        # Support multiple possible response shapes
+        liveness = entity.get("liveness") or entity.get("face") or {}
+        return bool(liveness.get("match") or liveness.get("confidence", 0) >= 0.8)
+    except HTTPException:
+        return False
+
+
+async def _dojah_request(method: str, path: str, json: dict | None = None, params: dict | None = None) -> dict:
+    """Generic Dojah request helper.
+
+    Tries the configured Dojah base URL with the provided method and
+    returns parsed JSON. Raises HTTPException(502) on network/error.
+    """
     import httpx
 
-    url = f"{DOJAH_BASE_URL}/api/v1/kyc/liveness"
+    if path.startswith("http"):
+        url = path
+    else:
+        url = DOJAH_BASE_URL.rstrip("/") + (path if path.startswith("/") else f"/{path}")
+
     headers = {
         "AppId": DOJAH_APP_ID,
         "Authorization": DOJAH_SECRET,
         "Content-Type": "application/json",
     }
-    payload = {
-        "reference_id": dojah_ref,
-        "image": image_base64,
-    }
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(url, headers=headers, json=payload)
+            if method.upper() == "POST":
+                resp = await client.post(url, headers=headers, json=json)
+            else:
+                resp = await client.get(url, headers=headers, params=params)
             resp.raise_for_status()
-            body = resp.json()
-            return body.get("entity", {}).get("liveness", {}).get("match", False)
-    except Exception:
-        return False
+            return resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Dojah API error: {str(e)}")
+
+
+async def _get_verification_record_by_ref(dojah_ref: str) -> dict | None:
+    """Fetch verification record by Dojah reference ID."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM verifications WHERE dojah_ref = $1",
+            dojah_ref,
+        )
+    return dict(row) if row else None
+
+
+async def handle_dojah_webhook(payload: dict) -> None:
+    """Handle incoming Dojah webhook/callback payload.
+
+    The provider may send different shapes; this handler attempts to
+    be tolerant: it extracts a reference ID, status, and verified_at
+    when available and updates the local verification record and
+    janitor row accordingly.
+    """
+    # Try common payload shapes
+    reference = None
+    if not isinstance(payload, dict):
+        return
+
+    # Common top-level fields
+    reference = payload.get("reference_id") or payload.get("reference")
+
+    # Nested entity
+    if not reference:
+        entity = payload.get("entity") or {}
+        reference = entity.get("reference_id") or entity.get("dojah_reference")
+
+    if not reference:
+        return
+
+    # Determine verified status
+    verified = False
+    verified_at = None
+    # Check common status fields
+    status_field = payload.get("status") or (payload.get("entity") or {}).get("status")
+    if isinstance(status_field, str) and status_field.lower() in ("verified", "success", "completed"):
+        verified = True
+
+    # Check liveness/face match nested
+    entity = payload.get("entity") or {}
+    liveness = entity.get("liveness") or entity.get("face") or {}
+    if isinstance(liveness, dict) and (liveness.get("match") or liveness.get("confidence", 0) >= 0.8):
+        verified = True
+        if liveness.get("verified_at"):
+            verified_at = liveness.get("verified_at")
+
+    # Fallback for explicit verified_at
+    if not verified_at:
+        verified_at = payload.get("verified_at") or entity.get("verified_at")
+
+    # Update verification record
+    record = await _get_verification_record_by_ref(reference)
+    if not record:
+        return
+
+    janitor_id = record.get("janitor_id")
+    update_data = {"status": "verified" if verified else "failed"}
+    if verified_at:
+        update_data["verified_at"] = verified_at
+
+    await _upsert_verification_record(janitor_id, {**update_data, "dojah_ref": reference})
+
+    # If verified, mark janitor and recalc trust
+    if verified and janitor_id:
+        import uuid as _uuid
+        pool = get_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE janitors SET is_verified = TRUE, verified_at = $1 WHERE id = $2",
+                datetime.fromisoformat(verified_at) if verified_at else datetime.now(timezone.utc),
+                _uuid.UUID(janitor_id),
+            )
+
+        janitor = await janitor_repo.get_by_id(janitor_id)
+        if janitor:
+            trust = calculate_trust_score(
+                is_verified=True,
+                punctuality_rate=janitor.get("punctuality_rate", 0.0),
+                avg_rating=janitor.get("avg_rating", 0.0),
+            )
+            await janitor_repo.update_trust_score(janitor_id, trust.score, trust.tier.value)
