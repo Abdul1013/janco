@@ -23,7 +23,11 @@ CREATE TABLE IF NOT EXISTS profiles (
     lng             DOUBLE PRECISION,
     push_token      TEXT,
     is_registered   BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at      TIMESTAMPTZ,
+    deletion_requested_at TIMESTAMPTZ,
+    deletion_reason TEXT,
+    anonymized_at   TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_profiles_email      ON profiles(email);

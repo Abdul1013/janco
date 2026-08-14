@@ -38,18 +38,17 @@ async def create_profile(user_id: str, data: dict[str, Any]) -> dict:
 
 
 async def get_profile(user_id: str) -> dict | None:
-    """Fetch a single profile by user ID.
+    """Fetch a single active profile by user ID.
 
-    Returns:
-        Profile dict (password_hash excluded for safety) or None.
+    Deleted accounts are intentionally hidden from normal profile reads.
     """
     pool = get_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             # Never return the hash to callers — strip it here
             "SELECT id, email, full_name, phone, avatar_url, role, address, "
-            "landmark, lat, lng, push_token, is_registered, created_at "
-            "FROM profiles WHERE id = $1",
+            "landmark, lat, lng, push_token, is_registered, created_at, deleted_at "
+            "FROM profiles WHERE id = $1 AND deleted_at IS NULL AND is_active = TRUE",
             uuid.UUID(str(user_id)),
         )
     return dict(row) if row else None
@@ -111,9 +110,42 @@ async def update_profile(user_id: str, data: dict[str, Any]) -> dict | None:
     vals: list[Any] = [uuid.UUID(str(user_id))] + list(data.values())
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            f"UPDATE profiles SET {set_clauses} WHERE id = $1 RETURNING "
+            f"UPDATE profiles SET {set_clauses} WHERE id = $1 AND deleted_at IS NULL RETURNING "
             "id, email, full_name, phone, avatar_url, role, address, "
             "landmark, lat, lng, push_token, is_registered, created_at",
             *vals,
         )
     return dict(row) if row else None
+
+
+async def anonymize_profile(user_id: str) -> bool:
+    """Permanently remove direct identifiers from a user profile.
+
+    This is the privacy-safe baseline for a standard account-deletion flow.
+    It preserves the record key for auditability while removing personal data.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute(
+            """
+            UPDATE profiles
+            SET email = $2,
+                full_name = 'Deleted User',
+                phone = NULL,
+                avatar_url = NULL,
+                address = NULL,
+                landmark = NULL,
+                lat = NULL,
+                lng = NULL,
+                push_token = NULL,
+                is_registered = FALSE,
+                password_hash = NULL,
+                is_active = FALSE,
+                deleted_at = COALESCE(deleted_at, NOW()),
+                anonymized_at = COALESCE(anonymized_at, NOW())
+            WHERE id = $1 AND deleted_at IS NULL
+            """,
+            uuid.UUID(str(user_id)),
+            f"deleted+{user_id}@janco.app",
+        )
+    return bool(result)

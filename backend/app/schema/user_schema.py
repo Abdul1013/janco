@@ -88,6 +88,11 @@ class PushTokenRequest(BaseModel):
     push_token: str
 
 
+class DeleteAccountRequest(BaseModel):
+    """Payload for confirming account deletion with a password."""
+    password: str
+
+
 class UserResponse(BaseModel):
     """User profile returned by the API."""
     id: str
