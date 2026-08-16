@@ -19,7 +19,7 @@ import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../constants/theme/ThemeContext';
-import * as paymentApi from '../api/paymentApi';
+import * as paymentApi from '../../api/paymentApi';
 import ScreenWrapper from '../components/ui/ScreenWrapper';
 import AppText from '../components/ui/AppText';
 import AppButton from '../components/ui/AppButton';

@@ -18,7 +18,7 @@ import ScreenWrapper from '../components/ui/ScreenWrapper';
 import AppText from '../components/ui/AppText';
 import AppButton from '../components/ui/AppButton';
 import AppCard from '../components/ui/AppCard';
-import * as ratingApi from '../api/ratingApi';
+import * as ratingApi from '../../api/ratingApi';
 
 export default function RatingScreen() {
   const navigation = useNavigation();

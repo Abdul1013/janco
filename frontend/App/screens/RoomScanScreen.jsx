@@ -37,7 +37,7 @@ import ScreenWrapper from '../components/ui/ScreenWrapper';
 import AppText from '../components/ui/AppText';
 import AppButton from '../components/ui/AppButton';
 import AppCard from '../components/ui/AppCard';
-import * as roomScanApi from '../api/roomScanApi';
+import * as roomScanApi from '../../api/roomScanApi';
 
 // ---------------------------------------------------------------------------
 // Constants
