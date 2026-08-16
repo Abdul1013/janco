@@ -16,8 +16,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import * as chatApi from '../api/chatApi';
-import { WS_BASE_URL } from '../api/config';
+import * as chatApi from '../../api/chatApi';
+import { WS_BASE_URL } from '../../api/config';
 import useAuthStore from '../store/authStore';
 
 const MAX_RECONNECT_DELAY_MS = 30_000;

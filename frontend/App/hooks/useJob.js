@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import * as bookingApi from '../api/bookingApi';
+import * as bookingApi from '../../api/bookingApi';
 import useNetworkStore from '../store/networkStore';
 
 export default function useJobs(initialJobId = null) {

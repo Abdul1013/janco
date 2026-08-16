@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import * as janitorApi from '../api/janitorApi';
-import * as bookingApi from '../api/bookingApi';
+import * as janitorApi from '../../api/janitorApi';
+import * as bookingApi from '../../api/bookingApi';
 
 export const useJanitorProfile = (userId) => {
   const [availability, setAvailability] = useState(false);

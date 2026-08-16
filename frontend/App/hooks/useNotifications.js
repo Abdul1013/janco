@@ -20,7 +20,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { useNavigation } from '@react-navigation/native';
-import * as authApi from '../api/authApi';
+import * as authApi from '../../api/authApi';
 
 // Configure how notifications are handled in the foreground.
 // Guarded: in Expo Go (SDK 53+) parts of expo-notifications are removed and can
