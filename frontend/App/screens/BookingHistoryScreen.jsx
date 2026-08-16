@@ -9,7 +9,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "../constants/theme/ThemeContext";
-import * as bookingApi from "../api/bookingApi";
+import * as bookingApi from "../../api/bookingApi";
 import ScreenWrapper from "../components/ui/ScreenWrapper";
 import AppCard from "../components/ui/AppCard";
 import AppText from "../components/ui/AppText";

@@ -15,7 +15,7 @@ import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../constants/theme/ThemeContext';
-import { getLegalDoc } from '../api/legalApi';
+import { getLegalDoc } from '../../api/legalApi';
 import ScreenWrapper from '../components/ui/ScreenWrapper';
 import AppText from '../components/ui/AppText';
 
