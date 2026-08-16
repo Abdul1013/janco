@@ -12,8 +12,8 @@
  */
 
 import { create } from 'zustand';
-import * as bookingApi from '../api/bookingApi';
-import * as pricingApi from '../api/pricingApi';
+import * as bookingApi from '../../api/bookingApi';
+import * as pricingApi from '../../api/pricingApi';
 
 const useBookingStore = create((set, get) => ({
   // Flow state

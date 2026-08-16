@@ -10,8 +10,8 @@
 
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as authApi from '../api/authApi';
-import { registerAuthHandlers } from '../api/client';
+import * as authApi from '../../api/authApi';
+import { registerAuthHandlers } from '../../api/client';
 
 const TOKEN_KEY = '@janco_tokens';
 

@@ -76,7 +76,7 @@ const useNetworkStore = create((set, get) => ({
     if (offlineQueue.length === 0) return;
 
     // Dynamic import to avoid circular dependency
-    const { default: client } = await import('../api/client');
+    const { default: client } = await import('../../api/client');
 
     const total = offlineQueue.length;
     const remaining = [];
