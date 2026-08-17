@@ -15,7 +15,7 @@ import ScreenWrapper from '../../components/ui/ScreenWrapper';
 import AppInput from '../../components/ui/AppInput';
 import AppButton from '../../components/ui/AppButton';
 import AppText from '../../components/ui/AppText';
-import * as authApi from '../../api/authApi';
+import * as authApi from '../../../api/authApi';
 
 export default function UpdatePasswordScreen() {
   const navigation = useNavigation();

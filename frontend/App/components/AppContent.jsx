@@ -9,11 +9,13 @@ import { NavigationContainer } from "@react-navigation/native";
 import RootNavigator, { linking } from "../navigation/RootNavigator";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { useTheme } from "../constants/theme/ThemeContext";
 
 SplashScreen.preventAutoHideAsync();
 
 export default function AppContent() {
   const initialized = useAuthStore((s) => s.initialized);
+  const { isDark, colors } = useTheme();
   const [fontsLoaded] = useFonts({
     Chewy: require("../../assets/fonts/Chewy-Regular.ttf"),
     Quicksand: require("../../assets/fonts/Quicksand-Regular.ttf"),
@@ -39,11 +41,13 @@ export default function AppContent() {
   }
 
   return (
-    <NavigationContainer linking={linking}>
-      <SafeAreaView style={{ flex: 1 }}>
-   
-        <RootNavigator />
-      </SafeAreaView>
-    </NavigationContainer>
+    <>
+      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={colors.surface} />
+      <NavigationContainer linking={linking}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
+          <RootNavigator />
+        </SafeAreaView>
+      </NavigationContainer>
+    </>
   );
 }

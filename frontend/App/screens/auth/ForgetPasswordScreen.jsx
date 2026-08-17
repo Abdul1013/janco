@@ -11,7 +11,7 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../constants/theme/ThemeContext';
-import * as authApi from '../../api/authApi';
+import * as authApi from '../../../api/authApi';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
 import AppInput from '../../components/ui/AppInput';
 import AppButton from '../../components/ui/AppButton';

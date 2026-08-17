@@ -4,7 +4,6 @@ import {
   Platform,
   RefreshControl,
   ScrollView,
-  StatusBar,
   StyleSheet,
   View,
 } from 'react-native';
@@ -70,7 +69,6 @@ export default function ScreenWrapper({
 
   return (
     <SafeAreaView style={containerStyle} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
       {showHeader && (
         <AppHeader title={title} showBack={showBack} onBack={onBack} rightElement={headerRight} />
       )}
