@@ -22,7 +22,7 @@ import AppText from "../../components/ui/AppText";
 import AppInput from "../../components/ui/AppInput";
 import AppButton from "../../components/ui/AppButton";
 import AppCard from "../../components/ui/AppCard";
-import * as verificationApi from "../../api/verificationApi";
+import * as verificationApi from "../../../api/verificationApi";
 import AppHeader from "../../components/ui/AppHeader";
 
 const STEPS = [

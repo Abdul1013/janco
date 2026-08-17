@@ -9,7 +9,7 @@ import AppInput from '../../components/ui/AppInput';
 import AppButton from '../../components/ui/AppButton';
 import AppText from '../../components/ui/AppText';
 import AppCard from '../../components/ui/AppCard';
-import * as janitorApi from '../../api/janitorApi';
+import * as janitorApi from '../../../api/janitorApi';
 
 const IconMap = { MaterialIcons, MaterialCommunityIcons };
 

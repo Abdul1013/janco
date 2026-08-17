@@ -13,7 +13,7 @@ import { View, Image, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../constants/theme/ThemeContext';
 import { useAuth } from '../../hooks/authContext';
-import * as janitorApi from '../../api/janitorApi';
+import * as janitorApi from '../../../api/janitorApi';
 import ScreenWrapper from '../../components/ui/ScreenWrapper';
 import AppText from '../../components/ui/AppText';
 import AppButton from '../../components/ui/AppButton';
